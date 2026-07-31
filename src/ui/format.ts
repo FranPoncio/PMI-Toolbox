@@ -44,3 +44,12 @@ export function signedMonths(value: number | null): string {
   const s = `${Math.abs(value).toFixed(1)} m`;
   return value < 0 ? `−${s}` : value > 0 ? `+${s}` : s;
 }
+
+/**
+ * Fecha-hora de un ISO a `YYYY-MM-DD HH:mm` (UTC). Determinista, para la
+ * bitácora. Devuelve el string tal cual si no parece un ISO.
+ */
+export function formatDateTime(iso: string): string {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(iso);
+  return m ? `${m[1]} ${m[2]}` : iso;
+}

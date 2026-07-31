@@ -4,7 +4,7 @@
  * evolución real de EV y AC en el tiempo.
  */
 
-import type { Baseline, ProgressEntry } from '../core/types';
+import type { AuditEntry, Baseline, ProgressEntry, User } from '../core/types';
 import { buildBaselineSnapshot } from '../analytics/baseline';
 import {
   DATA_DATE,
@@ -12,8 +12,24 @@ import {
   project,
   workPackages,
 } from '../fixtures/gasoducto';
-import { newId } from './db';
-import { bulkInsert, countProjects } from './repository';
+import { db, newId } from './db';
+import { appendAudit, bulkInsert, countProjects, countUsers, listUsers } from './repository';
+
+/** Usuarios de ejemplo. */
+const SEED_USERS: User[] = [
+  { id: 'u-alcaraz', nombre: 'M. Alcaraz', rol: 'jefe_proyecto' },
+  { id: 'u-duarte', nombre: 'S. Duarte', rol: 'analista' },
+  { id: 'u-sosa', nombre: 'P. Sosa', rol: 'analista' },
+  { id: 'u-vega', nombre: 'C. Vega', rol: 'auditor' },
+];
+
+/** Siembra los usuarios si no hay ninguno. Devuelve la lista vigente. */
+export async function seedUsersIfEmpty(): Promise<User[]> {
+  if ((await countUsers()) === 0) {
+    await db.users.bulkPut(SEED_USERS);
+  }
+  return listUsers();
+}
 
 /** Fechas de corte del ejemplo (mensuales) hasta la fecha de corte final. */
 const CUT_DATES = [
@@ -77,5 +93,47 @@ export async function seedIfEmpty(): Promise<boolean> {
   };
 
   await bulkInsert([project], [...workPackages], buildHistory(), [baseline]);
+  await seedAudit(baseline);
   return true;
+}
+
+/** Bitácora inicial retroactiva, para que el ejemplo tenga historia real. */
+async function seedAudit(baseline: Baseline): Promise<void> {
+  const bacFmt = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: project.moneda,
+    maximumFractionDigits: 0,
+  }).format(project.bac);
+
+  const jefe = SEED_USERS[0]!; // M. Alcaraz
+  const analistas = [SEED_USERS[1]!, SEED_USERS[2]!]; // Duarte, Sosa
+
+  const entries: AuditEntry[] = [];
+  const push = (ts: string, user: User, action: AuditEntry['action'], entity: AuditEntry['entity'], resumen: string) =>
+    entries.push({
+      id: newId(),
+      ts,
+      projectId: project.id,
+      userId: user.id,
+      userNombre: user.nombre,
+      userRol: user.rol,
+      action,
+      entity,
+      resumen,
+    });
+
+  push(`${project.fechaInicio}T09:00:00.000Z`, jefe, 'crear', 'proyecto', `Creó el proyecto «${project.nombre}»`);
+  push(
+    `${baseline.fechaAprobacion}T15:30:00.000Z`,
+    jefe,
+    'congelar',
+    'linea_base',
+    `Congeló la línea base v${baseline.version} (BAC ${bacFmt})`
+  );
+  CUT_DATES.forEach((date, i) => {
+    const u = analistas[i % analistas.length]!;
+    push(`${date}T18:00:00.000Z`, u, 'importar', 'corte', `Cargó el corte ${date}`);
+  });
+
+  for (const e of entries) await appendAudit(e);
 }

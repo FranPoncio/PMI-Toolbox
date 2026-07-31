@@ -10,11 +10,13 @@ import { WorkPackageTable } from './components/WorkPackageTable';
 import { StatusPill } from './components/primitives';
 import { Button, Select } from './components/fields';
 import { Modal } from './components/Modal';
+import { AuditModal } from './forms/AuditModal';
 import { BaselineModal } from './forms/BaselineModal';
 import { DataModal } from './forms/DataModal';
 import { ProgressForm } from './forms/ProgressForm';
 import { ProjectForm } from './forms/ProjectForm';
 import { Report } from './Report';
+import { ROL_LABEL } from './labels';
 import { buildCsv, downloadCsv } from './export';
 
 const TIPO_LABEL: Record<string, string> = {
@@ -24,7 +26,7 @@ const TIPO_LABEL: Record<string, string> = {
   servicios: 'Servicios',
 };
 
-type Dialog = 'progress' | 'data' | 'baseline' | 'report' | 'newProject' | null;
+type Dialog = 'progress' | 'data' | 'baseline' | 'report' | 'audit' | 'newProject' | null;
 
 export function Dashboard() {
   const init = usePmStore((s) => s.init);
@@ -35,6 +37,10 @@ export function Dashboard() {
   const setDataDate = usePmStore((s) => s.setDataDate);
   const workPackages = usePmStore((s) => s.workPackages);
   const progressEntries = usePmStore((s) => s.progressEntries);
+  const users = usePmStore((s) => s.users);
+  const currentUserId = usePmStore((s) => s.currentUserId);
+  const setCurrentUser = usePmStore((s) => s.setCurrentUser);
+  const auditLog = usePmStore((s) => s.auditLog);
 
   const view = useProjectView();
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -54,6 +60,23 @@ export function Dashboard() {
         <div className="text-[11px] font-600 uppercase tracking-[0.16em] text-tech">
           PMI Toolbox · Tablero EVM
         </div>
+        {/* Sesión: quién está operando (atribuye la trazabilidad). */}
+        {users.length > 0 && (
+          <label className="flex items-center gap-1.5 text-[12px] text-muted">
+            <span className="text-tech">Sesión</span>
+            <Select
+              value={currentUserId ?? ''}
+              onChange={(e) => setCurrentUser(e.target.value)}
+              className="py-1"
+            >
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nombre} · {ROL_LABEL[u.rol]}
+                </option>
+              ))}
+            </Select>
+          </label>
+        )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {projects.length > 0 && (
             <Select
@@ -97,6 +120,7 @@ export function Dashboard() {
             </Button>
           )}
           {view && <Button onClick={() => setDialog('report')}>Reporte</Button>}
+          {view && <Button onClick={() => setDialog('audit')}>Actividad</Button>}
           <Button variant="primary" onClick={() => setDialog('newProject')}>
             Nuevo proyecto
           </Button>
@@ -137,6 +161,13 @@ export function Dashboard() {
         />
       )}
       {dialog === 'report' && view && <Report view={view} onClose={() => setDialog(null)} />}
+      {dialog === 'audit' && view && (
+        <AuditModal
+          entries={auditLog}
+          projectNombre={view.project.nombre}
+          onClose={() => setDialog(null)}
+        />
+      )}
     </div>
   );
 }

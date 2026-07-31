@@ -1,5 +1,12 @@
 import Dexie, { type Table } from 'dexie';
-import type { Baseline, ProgressEntry, Project, WorkPackage } from '../core/types';
+import type {
+  AuditEntry,
+  Baseline,
+  ProgressEntry,
+  Project,
+  User,
+  WorkPackage,
+} from '../core/types';
 
 /**
  * Base de datos local de PMI Toolbox sobre IndexedDB (Dexie).
@@ -17,6 +24,8 @@ export class PmToolDB extends Dexie {
   workPackages!: Table<WorkPackage, string>;
   progressEntries!: Table<ProgressEntry, string>;
   baselines!: Table<Baseline, string>;
+  users!: Table<User, string>;
+  audit!: Table<AuditEntry, string>;
 
   constructor() {
     super('pmtool');
@@ -27,6 +36,11 @@ export class PmToolDB extends Dexie {
     });
     this.version(2).stores({
       baselines: 'id, projectId, [projectId+version]',
+    });
+    // v3: usuarios y bitácora de auditoría (trazabilidad).
+    this.version(3).stores({
+      users: 'id, nombre',
+      audit: 'id, projectId, ts, [projectId+ts]',
     });
   }
 }

@@ -114,6 +114,19 @@ resumen muestran el **roll-up** de sus hojas y nunca se tipean, así no hay dobl
 conteo. El consolidado, la línea base y las decisiones se calculan sobre las
 hojas; la tabla de detalle muestra el árbol indentado con los resúmenes.
 
+### Trazabilidad (usuarios + bitácora)
+
+Hay usuarios con **rol** (analista / jefe de proyecto / director / auditor) y un
+selector de **sesión**: quien opera queda registrado. Cada mutación (alta/edición/
+baja de proyectos, paquetes y cortes; congelar línea base; imports) deja una
+**entrada de bitácora inmutable** con usuario, rol, fecha-hora y detalle — la
+trazabilidad que pide el reporte a banca multilateral. Se ve en «Actividad».
+
+> Alcance: la persistencia es **local por navegador** (IndexedDB). La sesión
+> simula el multiusuario y la bitácora es real, pero la **sincronización entre
+> dispositivos/usuarios** requiere un backend con servidor, base de datos y
+> autenticación, que no está incluido (es el próximo paso de arquitectura).
+
 ### Panel de decisión y exposición
 
 Cada paquete se clasifica (dentro de plan / atención / desvío) por su peor
@@ -216,7 +229,9 @@ En orden de valor para el perfil PMO / control de proyectos:
 - [x] Reporte con **Riesgos & Issues + Próximos pasos** (estándar ISR / PMR)
 - [x] EAC/pronóstico como **rango** entre métodos (forecasting por banda)
 - [x] **WBS jerárquica** (nodos de resumen con roll-up de sus hojas)
-- [ ] Backend multiusuario con trazabilidad (quién cargó qué corte)
+- [x] **Usuarios, roles y bitácora de auditoría** (quién cargó qué corte, y cuándo)
+- [ ] Sincronización multi-dispositivo (requiere un backend/servidor — no incluido:
+      hoy la persistencia es local por navegador, IndexedDB)
 - [ ] Notificación a Slack cuando un paquete cruza a "desvío"
 
 ---

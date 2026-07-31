@@ -3,7 +3,14 @@
  * Dexie directamente, hablan con estas funciones. Devuelven Promises.
  */
 
-import type { Baseline, ProgressEntry, Project, WorkPackage } from '../core/types';
+import type {
+  AuditEntry,
+  Baseline,
+  ProgressEntry,
+  Project,
+  User,
+  WorkPackage,
+} from '../core/types';
 import { db } from './db';
 
 // ── Proyectos ───────────────────────────────────────────────────────────────
@@ -103,10 +110,35 @@ export async function deleteBaseline(id: string): Promise<void> {
   await db.baselines.delete(id);
 }
 
+// ── Usuarios y auditoría ──────────────────────────────────────────────────────
+
+export function listUsers(): Promise<User[]> {
+  return db.users.orderBy('nombre').toArray();
+}
+
+export async function putUser(user: User): Promise<void> {
+  await db.users.put(user);
+}
+
+/** Agrega una entrada de bitácora (inmutable: solo se agrega, nunca se edita). */
+export async function appendAudit(entry: AuditEntry): Promise<void> {
+  await db.audit.add(entry);
+}
+
+/** Bitácora de un proyecto, más reciente primero. */
+export async function listAudit(projectId: string): Promise<AuditEntry[]> {
+  const list = await db.audit.where('projectId').equals(projectId).toArray();
+  return list.sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
+}
+
 // ── Utilidades ────────────────────────────────────────────────────────────────
 
 export function countProjects(): Promise<number> {
   return db.projects.count();
+}
+
+export function countUsers(): Promise<number> {
+  return db.users.count();
 }
 
 /** Reemplaza en bloque todo el contenido (usado por el seed inicial). */

@@ -29,7 +29,7 @@ export function ProgressForm({
   defaultDate: string;
   onClose: () => void;
 }) {
-  const saveProgress = usePmStore((s) => s.saveProgress);
+  const importProgress = usePmStore((s) => s.importProgress);
   const [modo, setModo] = useState<'form' | 'import'>('form');
   const [fecha, setFecha] = useState(defaultDate || project.fechaInicio);
 
@@ -50,21 +50,15 @@ export function ProgressForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!fecha) return;
-    for (const wp of workPackages) {
-      const row = rows[wp.id]!;
-      if (row.avance === '' && row.costo === '') continue; // sin datos: no crear corte
-      const existing = progressEntries.find(
-        (p) => p.workPackageId === wp.id && p.fechaCorte === fecha
-      );
-      const avanceFisico = clamp01((Number(row.avance) || 0) / 100);
-      await saveProgress({
-        ...(existing ? { id: existing.id } : {}),
+    const drafts = workPackages
+      .filter((wp) => !(rows[wp.id]!.avance === '' && rows[wp.id]!.costo === ''))
+      .map((wp) => ({
         workPackageId: wp.id,
         fechaCorte: fecha,
-        avanceFisico,
-        costoRealAcum: Number(row.costo) || 0,
-      });
-    }
+        avanceFisico: clamp01((Number(rows[wp.id]!.avance) || 0) / 100),
+        costoRealAcum: Number(rows[wp.id]!.costo) || 0,
+      }));
+    await importProgress(drafts, 'manual');
     onClose();
   }
 

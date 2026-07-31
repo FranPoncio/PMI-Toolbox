@@ -77,6 +77,40 @@ export interface ProgressEntry {
 export type PlannedItem = Pick<WorkPackage, 'presupuesto' | 'fechaInicioPlan' | 'fechaFinPlan'>;
 
 // ────────────────────────────────────────────────────────────────────────────
+// Usuarios y auditoría (trazabilidad)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Rol del usuario (define qué reporta y con qué autoridad). */
+export type Rol = 'analista' | 'jefe_proyecto' | 'director' | 'auditor';
+
+export interface User {
+  id: string;
+  nombre: string;
+  rol: Rol;
+}
+
+export type AuditAction = 'crear' | 'editar' | 'borrar' | 'congelar' | 'importar';
+export type AuditEntity = 'proyecto' | 'paquete' | 'corte' | 'linea_base';
+
+/**
+ * Entrada de bitácora: quién hizo qué y cuándo. Cada mutación deja una,
+ * inmutable, para trazabilidad tipo reporte a banca multilateral.
+ */
+export interface AuditEntry {
+  id: string;
+  /** Instante ISO (UTC) del cambio. */
+  ts: string;
+  projectId: string;
+  userId: string;
+  userNombre: string;
+  userRol: Rol;
+  action: AuditAction;
+  entity: AuditEntity;
+  /** Descripción legible del cambio. */
+  resumen: string;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Línea base (Performance Measurement Baseline)
 // ────────────────────────────────────────────────────────────────────────────
 
