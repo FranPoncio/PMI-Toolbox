@@ -15,6 +15,9 @@ infraestructura y del reporte a organismos multilaterales de crédito.
 > → WBS → línea base → cortes → reporte). La app también abre con una **intro
 > de bienvenida**, un **recorrido guiado** (spotlight paso a paso) y ayudas en
 > cada menú.
+>
+> 🎬 **Videos y capturas:** ver **[docs/media](docs/media/)** — demo completa,
+> demo de carga de un corte, y capturas del tablero, el reporte y el onboarding.
 
 ---
 
