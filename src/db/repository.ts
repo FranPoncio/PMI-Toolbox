@@ -68,6 +68,11 @@ export async function putProgressEntry(entry: ProgressEntry): Promise<void> {
   await db.progressEntries.put(entry);
 }
 
+/** Alta en bloque de cortes (usado por el import de avances/costos). */
+export async function bulkPutProgress(entries: ProgressEntry[]): Promise<void> {
+  await db.progressEntries.bulkPut(entries);
+}
+
 export async function deleteProgressEntry(id: string): Promise<void> {
   await db.progressEntries.delete(id);
 }

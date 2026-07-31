@@ -80,6 +80,31 @@ export function Report({ view, onClose }: { view: ProjectView; onClose: () => vo
           <div className="avoid-break">
             <WorkPackageTable packages={analysis.packages} currency={project.moneda} />
           </div>
+
+          {(project.riesgos || project.proximosPasos) && (
+            <div className="avoid-break grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {project.riesgos && (
+                <section className="rounded-md border border-line bg-panel">
+                  <div className="border-b border-line bg-bg/70 px-5 py-3 text-[11px] font-600 uppercase tracking-[0.14em] text-tech">
+                    Riesgos e issues
+                  </div>
+                  <p className="whitespace-pre-line px-5 py-4 text-[13px] leading-relaxed text-ink">
+                    {project.riesgos}
+                  </p>
+                </section>
+              )}
+              {project.proximosPasos && (
+                <section className="rounded-md border border-line bg-panel">
+                  <div className="border-b border-line bg-bg/70 px-5 py-3 text-[11px] font-600 uppercase tracking-[0.14em] text-tech">
+                    Próximos pasos
+                  </div>
+                  <p className="whitespace-pre-line px-5 py-4 text-[13px] leading-relaxed text-ink">
+                    {project.proximosPasos}
+                  </p>
+                </section>
+              )}
+            </div>
+          )}
         </div>
 
         <p className="mt-8 border-t border-line pt-4 text-[11px] text-muted">

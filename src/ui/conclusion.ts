@@ -42,13 +42,24 @@ export function buildConclusion(a: ProjectAnalysis): Conclusion {
   );
 
   if (evm.eac.cpi !== null) {
+    // Banda de pronóstico: rango entre las variantes de EAC (mejor–peor caso),
+    // en vez de un único número puntual (enfoque de forecasting por rango).
+    const eacs = [evm.eac.cpi, evm.eac.budgetRate, evm.eac.cpiSpi].filter(
+      (v): v is number => v !== null
+    );
+    const lo = Math.min(...eacs);
+    const hi = Math.max(...eacs);
+    const rango =
+      hi - lo > 1 ? ` El cierre proyectado según método va de ${money(lo, cur)} a ${money(hi, cur)}.` : '';
+
     parrafos.push(
       `De sostenerse la eficiencia de costo actual, el proyecto cerraría en ${money(
         evm.eac.cpi,
         cur
       )} contra un presupuesto de ${money(a.project.bac, cur)} — ` +
         `un desvío proyectado de ${signedMoney(evm.vac.cpi, cur)} (VAC). ` +
-        `Terminar dentro del presupuesto exigiría un TCPI de ${index(evm.tcpiBac)} en lo que resta.`
+        `Terminar dentro del presupuesto exigiría un TCPI de ${index(evm.tcpiBac)} en lo que resta.` +
+        rango
     );
   }
 

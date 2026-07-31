@@ -32,6 +32,9 @@ interface PmState {
   saveProgress: (data: Omit<ProgressEntry, 'id'> & { id?: string }) => Promise<void>;
   removeProgress: (id: string) => Promise<void>;
 
+  /** Alta/actualización en bloque de cortes desde un import de avances/costos. */
+  importProgress: (drafts: Omit<ProgressEntry, 'id'>[]) => Promise<void>;
+
   /** Congela una nueva línea base (versión siguiente) y la deja activa. */
   freezeBaseline: (fechaAprobacion: string, motivo: string) => Promise<void>;
   removeBaseline: (id: string) => Promise<void>;
@@ -154,6 +157,21 @@ export const usePmStore = create<PmState>((set, get) => {
       await repo.deleteProgressEntry(id);
       const pid = get().selectedProjectId;
       if (pid) await loadProjectData(pid, true);
+    },
+
+    async importProgress(drafts) {
+      const pid = get().selectedProjectId;
+      if (!pid || drafts.length === 0) return;
+      const existentes = get().progressEntries;
+      const entries: ProgressEntry[] = drafts.map((d) => {
+        // Reusa el id si ya existe un corte del mismo paquete y fecha (sobrescribe).
+        const prev = existentes.find(
+          (p) => p.workPackageId === d.workPackageId && p.fechaCorte === d.fechaCorte
+        );
+        return { ...d, id: prev?.id ?? newId() };
+      });
+      await repo.bulkPutProgress(entries);
+      await loadProjectData(pid, true);
     },
 
     async freezeBaseline(fechaAprobacion, motivo) {

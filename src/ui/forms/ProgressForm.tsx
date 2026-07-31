@@ -4,6 +4,7 @@ import { vigenteByWp } from '../../analytics/resolve';
 import { usePmStore } from '../../store/pmStore';
 import { Modal } from '../components/Modal';
 import { Button, Field, NumberInput, TextInput } from '../components/fields';
+import { ImportActualsModal } from './ImportActualsModal';
 
 interface Row {
   avance: string; // porcentaje 0..100
@@ -29,6 +30,7 @@ export function ProgressForm({
   onClose: () => void;
 }) {
   const saveProgress = usePmStore((s) => s.saveProgress);
+  const [modo, setModo] = useState<'form' | 'import'>('form');
   const [fecha, setFecha] = useState(defaultDate || project.fechaInicio);
 
   const prefill = useMemo(() => vigenteByWp(progressEntries, fecha), [progressEntries, fecha]);
@@ -66,13 +68,24 @@ export function ProgressForm({
     onClose();
   }
 
+  if (modo === 'import') {
+    return (
+      <ImportActualsModal project={project} workPackages={workPackages} onClose={() => setModo('form')} />
+    );
+  }
+
   return (
     <Modal title={`Cargar corte · ${project.nombre}`} onClose={onClose} wide>
       <form onSubmit={submit} className="space-y-4">
-        <div className="max-w-xs">
-          <Field label="Fecha de corte">
-            <TextInput type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-          </Field>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="max-w-xs">
+            <Field label="Fecha de corte">
+              <TextInput type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            </Field>
+          </div>
+          <Button type="button" onClick={() => setModo('import')}>
+            Importar avances/costos (CSV)
+          </Button>
         </div>
 
         <div className="overflow-x-auto">

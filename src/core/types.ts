@@ -26,6 +26,10 @@ export interface Project {
   /** Fecha de fin planificada (baseline). */
   fechaFinPlan: IsoDate;
   moneda: CurrencyCode;
+  /** Riesgos e issues del período (narrativa del reporte, estilo ISR/PMR). */
+  riesgos?: string;
+  /** Próximos pasos / acciones del período. */
+  proximosPasos?: string;
 }
 
 export interface WorkPackage {

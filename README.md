@@ -204,6 +204,9 @@ En orden de valor para el perfil PMO / control de proyectos:
 - [x] **Línea base congelada** + rebaselining con historial y divergencia
 - [x] **Reporte PDF** para comité (vía impresión del navegador)
 - [x] **Import de cronograma** CSV (Excel / MS Project / P6) con validación
+- [x] **Import de avances y costos reales** (patrón ERP → EVM) por CSV
+- [x] Reporte con **Riesgos & Issues + Próximos pasos** (estándar ISR / PMR)
+- [x] EAC/pronóstico como **rango** entre métodos (forecasting por banda)
 - [ ] Backend multiusuario con trazabilidad (quién cargó qué corte)
 - [ ] WBS jerárquica (proyecto → subproyecto → paquete → cuenta de control)
 - [ ] Notificación a Slack cuando un paquete cruza a "desvío"

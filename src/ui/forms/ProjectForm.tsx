@@ -22,6 +22,8 @@ export function ProjectForm({ project, onDone }: { project?: Project; onDone: ()
   const [fechaInicio, setFechaInicio] = useState(project?.fechaInicio ?? '');
   const [fechaFinPlan, setFechaFinPlan] = useState(project?.fechaFinPlan ?? '');
   const [moneda, setMoneda] = useState(project?.moneda ?? 'USD');
+  const [riesgos, setRiesgos] = useState(project?.riesgos ?? '');
+  const [proximosPasos, setProximosPasos] = useState(project?.proximosPasos ?? '');
 
   const valid =
     nombre.trim() !== '' && Number(bac) > 0 && fechaInicio !== '' && fechaFinPlan !== '' && fechaFinPlan >= fechaInicio;
@@ -37,6 +39,8 @@ export function ProjectForm({ project, onDone }: { project?: Project; onDone: ()
       fechaInicio,
       fechaFinPlan,
       moneda,
+      riesgos: riesgos.trim(),
+      proximosPasos: proximosPasos.trim(),
     });
     onDone();
   }
@@ -77,6 +81,23 @@ export function ProjectForm({ project, onDone }: { project?: Project; onDone: ()
           <TextInput type="date" value={fechaFinPlan} onChange={(e) => setFechaFinPlan(e.target.value)} />
         </Field>
       </div>
+
+      <Field label="Riesgos e issues" hint="Aparece en el reporte (estilo ISR / PMR).">
+        <textarea
+          value={riesgos}
+          onChange={(e) => setRiesgos(e.target.value)}
+          rows={2}
+          className="w-full rounded-md border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        />
+      </Field>
+      <Field label="Próximos pasos">
+        <textarea
+          value={proximosPasos}
+          onChange={(e) => setProximosPasos(e.target.value)}
+          rows={2}
+          className="w-full rounded-md border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        />
+      </Field>
 
       <div className="flex items-center justify-between pt-2">
         {project ? (
