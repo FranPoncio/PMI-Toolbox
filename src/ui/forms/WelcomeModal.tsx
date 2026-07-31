@@ -17,7 +17,7 @@ const PASOS: Array<{ n: string; t: string; d: string }> = [
  * Introducción de bienvenida: se muestra en el primer arranque (y se puede
  * reabrir desde «Guía»). Explica el flujo de trabajo de un vistazo.
  */
-export function WelcomeModal({ onClose }: { onClose: () => void }) {
+export function WelcomeModal({ onClose, onTour }: { onClose: () => void; onTour: () => void }) {
   return (
     <Modal title="Bienvenido a PMI Toolbox" onClose={onClose} wide>
       <p className="text-[14px] leading-relaxed text-muted">
@@ -60,9 +60,12 @@ export function WelcomeModal({ onClose }: { onClose: () => void }) {
         >
           Abrir la guía de uso completa ↗
         </a>
-        <Button variant="primary" onClick={onClose}>
-          Empezar
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={onTour}>Recorrido guiado</Button>
+          <Button variant="primary" onClick={onClose}>
+            Empezar
+          </Button>
+        </div>
       </div>
     </Modal>
   );

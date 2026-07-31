@@ -17,10 +17,58 @@ import { ProgressForm } from './forms/ProgressForm';
 import { ProjectForm } from './forms/ProjectForm';
 import { Report } from './Report';
 import { WelcomeModal } from './forms/WelcomeModal';
+import { Tour, type TourStep } from './components/Tour';
 import { ROL_LABEL } from './labels';
 import { buildCsv, downloadCsv } from './export';
 
 const ONBOARDED_KEY = 'pmi-toolbox.onboarded';
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="session"]',
+    title: 'Tu sesión',
+    body: 'Elegí quién opera. Cada cambio que hagas queda registrado a tu nombre en la bitácora.',
+  },
+  {
+    selector: '[data-tour="corte"]',
+    title: 'Fecha de corte',
+    body: 'Mirá el proyecto a cualquier fecha de corte cargada. El tablero se recalcula a esa fecha.',
+  },
+  {
+    selector: '[data-tour="btn-datos"]',
+    title: '1 · Datos (la WBS)',
+    body: 'Acá cargás y editás los paquetes de trabajo y su jerarquía. También importás un cronograma por CSV.',
+  },
+  {
+    selector: '[data-tour="btn-baseline"]',
+    title: '2 · Línea base',
+    body: 'Congelás el plan aprobado. A partir de ahí, todo se mide contra esa foto.',
+  },
+  {
+    selector: '[data-tour="btn-corte"]',
+    title: '3 · Cargar corte',
+    body: 'En cada fecha cargás el % de avance físico y el costo real acumulado de cada paquete.',
+  },
+  {
+    selector: '[data-tour="conclusion"]',
+    title: 'La conclusión',
+    body: 'El tablero abre con un veredicto en texto: si vas atrasado y/o sobre presupuesto, y por cuánto.',
+  },
+  {
+    selector: '[data-tour="decision"]',
+    title: 'Requiere decisión',
+    body: 'Los paquetes fuera de plan, ordenados por exposición (la plata en juego), con el motivo de cada uno.',
+  },
+  {
+    selector: '[data-tour="btn-report"]',
+    title: '4 · Reporte',
+    body: 'Sacás el documento imprimible para el comité (Guardar como PDF). Con «Exportar» bajás el CSV.',
+  },
+  {
+    title: '¡Listo!',
+    body: 'Ya conocés el circuito. Podés reabrir esta ayuda y el recorrido con el botón «Guía» cuando quieras.',
+  },
+];
 
 const TIPO_LABEL: Record<string, string> = {
   obra_civil: 'Obra civil',
@@ -48,6 +96,7 @@ export function Dashboard() {
   const view = useProjectView();
   const [dialog, setDialog] = useState<Dialog>(null);
   const [welcome, setWelcome] = useState(false);
+  const [tour, setTour] = useState(false);
 
   useEffect(() => {
     void init();
@@ -85,6 +134,7 @@ export function Dashboard() {
         {/* Sesión: quién está operando (atribuye la trazabilidad). */}
         {users.length > 0 && (
           <label
+            data-tour="session"
             className="flex items-center gap-1.5 text-[12px] text-muted"
             title="Quién está operando; cada cambio queda registrado a su nombre en la bitácora"
           >
@@ -117,37 +167,45 @@ export function Dashboard() {
             </Select>
           )}
           {view && view.availableCuts.length > 0 && (
-            <Select value={view.dataDate} onChange={(e) => setDataDate(e.target.value)}>
-              {view.availableCuts.map((d) => (
-                <option key={d} value={d}>
-                  Corte {d}
-                </option>
-              ))}
-            </Select>
+            <span data-tour="corte" className="inline-flex">
+              <Select value={view.dataDate} onChange={(e) => setDataDate(e.target.value)}>
+                {view.availableCuts.map((d) => (
+                  <option key={d} value={d}>
+                    Corte {d}
+                  </option>
+                ))}
+              </Select>
+            </span>
           )}
           {view && (
-            <Button
-              title="Cargar el avance físico y el costo real de una fecha de corte"
-              onClick={() => setDialog('progress')}
-            >
-              ＋ Corte
-            </Button>
+            <span data-tour="btn-corte" className="inline-flex">
+              <Button
+                title="Cargar el avance físico y el costo real de una fecha de corte"
+                onClick={() => setDialog('progress')}
+              >
+                ＋ Corte
+              </Button>
+            </span>
           )}
           {view && (
-            <Button
-              title="Editar el proyecto y su estructura de paquetes (WBS)"
-              onClick={() => setDialog('data')}
-            >
-              Datos
-            </Button>
+            <span data-tour="btn-datos" className="inline-flex">
+              <Button
+                title="Editar el proyecto y su estructura de paquetes (WBS)"
+                onClick={() => setDialog('data')}
+              >
+                Datos
+              </Button>
+            </span>
           )}
           {view && (
-            <Button
-              title="Ver o congelar la línea base: el plan aprobado contra el que se mide"
-              onClick={() => setDialog('baseline')}
-            >
-              {view.baseline ? `Línea base v${view.baseline.version}` : 'Línea base'}
-            </Button>
+            <span data-tour="btn-baseline" className="inline-flex">
+              <Button
+                title="Ver o congelar la línea base: el plan aprobado contra el que se mide"
+                onClick={() => setDialog('baseline')}
+              >
+                {view.baseline ? `Línea base v${view.baseline.version}` : 'Línea base'}
+              </Button>
+            </span>
           )}
           {view && (
             <Button
@@ -163,9 +221,11 @@ export function Dashboard() {
             </Button>
           )}
           {view && (
-            <Button title="Abrir el reporte imprimible (Guardar como PDF)" onClick={() => setDialog('report')}>
-              Reporte
-            </Button>
+            <span data-tour="btn-report" className="inline-flex">
+              <Button title="Abrir el reporte imprimible (Guardar como PDF)" onClick={() => setDialog('report')}>
+                Reporte
+              </Button>
+            </span>
           )}
           {view && (
             <Button title="Bitácora de auditoría: quién hizo qué y cuándo" onClick={() => setDialog('audit')}>
@@ -226,7 +286,16 @@ export function Dashboard() {
           onClose={() => setDialog(null)}
         />
       )}
-      {welcome && <WelcomeModal onClose={closeWelcome} />}
+      {welcome && (
+        <WelcomeModal
+          onClose={closeWelcome}
+          onTour={() => {
+            closeWelcome();
+            setTour(true);
+          }}
+        />
+      )}
+      {tour && <Tour steps={TOUR_STEPS} onFinish={() => setTour(false)} />}
     </div>
   );
 }
@@ -274,7 +343,7 @@ function ProjectDashboard({
       </header>
 
       {/* Regla de diseño: la pantalla abre con una conclusión escrita. */}
-      <section className="mt-6 max-w-3xl">
+      <section data-tour="conclusion" className="mt-6 max-w-3xl">
         <h2 className="text-lg font-600 leading-snug text-ink">{conclusion.titular}</h2>
         {conclusion.parrafos.map((p, i) => (
           <p key={i} className="mt-2 text-[14px] leading-relaxed text-muted">
@@ -294,7 +363,9 @@ function ProjectDashboard({
         </div>
       ) : (
         <div className="mt-6 space-y-5">
-          <DecisionPanel items={analysis.decisiones} currency={cur} />
+          <div data-tour="decision">
+            <DecisionPanel items={analysis.decisiones} currency={cur} />
+          </div>
           <EvmSummary evm={analysis.evm} currency={cur} />
           <SchedulePanel forecast={forecast} />
           <SCurveChart

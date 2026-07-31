@@ -13,7 +13,8 @@ infraestructura y del reporte a organismos multilaterales de crédito.
 > 📖 **¿Cómo se usa?** Guía de uso: en **[página web](https://claude.ai/code/artifact/7852d29b-849a-442f-b2cb-f7ab7d9e8200)**
 > o en **[Markdown](docs/GUIA-DE-USO.md)** — el manual paso a paso (crear proyecto
 > → WBS → línea base → cortes → reporte). La app también abre con una **intro
-> de bienvenida** y trae ayudas en cada menú.
+> de bienvenida**, un **recorrido guiado** (spotlight paso a paso) y ayudas en
+> cada menú.
 
 ---
 
