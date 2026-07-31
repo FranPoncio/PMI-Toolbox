@@ -16,7 +16,12 @@ infraestructura y del reporte a organismos multilaterales de crédito.
 
 1. **Motor EVM completo.** Calcula, a cualquier fecha de corte: PV, EV, AC, SV,
    CV, SPI, CPI, las **tres variantes clásicas de EAC**, ETC, VAC y TCPI.
-2. **Pronóstico de plazo (Earned Schedule).** Traduce el avance ganado a
+2. **Línea base congelada.** Aprobás una foto del plan (BAC + presupuesto,
+   pesos y fechas de cada paquete) y el desempeño se mide **contra esa foto**,
+   no contra el plan vivo. Editar un paquete después ya no mueve la base;
+   cambiar el alcance exige una **nueva versión** (rebaselining), con historial
+   completo y aviso de divergencia — auditable.
+3. **Pronóstico de plazo (Earned Schedule).** Traduce el avance ganado a
    *tiempo* y proyecta una **fecha de finalización** — no solo el sobrecosto.
 3. **Panel "Requiere decisión".** Arriba de todo, ordenado por **exposición
    económica**, con el **motivo explícito** de cada paquete fuera de plan.
@@ -86,6 +91,16 @@ tardísimo. **Earned Schedule** traduce el avance a tiempo:
   ganó (se halla invirtiendo la curva de PV: el `t` tal que `PV(t) = EV`).
 - **SV(t)** = ES − AT · **SPI(t)** = ES / AT · **IEAC(t)** = PD / SPI(t).
 - De ahí sale una **fecha de fin pronosticada**, comparada contra el plan.
+
+### Línea base (`src/analytics/baseline.ts`)
+
+Sin línea base, el PV se calcula contra el plan vivo (referencia provisoria).
+Al **congelar** una línea base se guarda una foto (`Baseline`) con el
+presupuesto, peso y fechas de cada paquete y el BAC total. A partir de ahí
+**PV, EV y BAC se miden contra esa foto**: editar un paquete no altera la base.
+Un **rebaseline** crea una versión nueva y conserva las anteriores. Si la
+estructura viva difiere de la base activa, se detecta la **divergencia**
+(agregados / quitados / modificados) y se avisa en pantalla.
 
 ### Panel de decisión y exposición
 
@@ -182,7 +197,7 @@ En orden de valor para el perfil PMO / control de proyectos:
 - [x] Persistencia local (Dexie) + estado (Zustand)
 - [x] Earned Schedule (pronóstico de fecha de fin)
 - [x] Export a CSV
-- [ ] **Línea base congelada** + registro de rebaselining (auditable)
+- [x] **Línea base congelada** + rebaselining con historial y divergencia
 - [ ] **Reporte PDF** para comité de dirección
 - [ ] Import de cronograma (MS Project / P6 / CSV) para el time-phasing real
 - [ ] Backend multiusuario con trazabilidad (quién cargó qué corte)

@@ -3,7 +3,7 @@
  * Dexie directamente, hablan con estas funciones. Devuelven Promises.
  */
 
-import type { ProgressEntry, Project, WorkPackage } from '../core/types';
+import type { Baseline, ProgressEntry, Project, WorkPackage } from '../core/types';
 import { db } from './db';
 
 // ── Proyectos ───────────────────────────────────────────────────────────────
@@ -67,6 +67,32 @@ export async function deleteProgressEntry(id: string): Promise<void> {
   await db.progressEntries.delete(id);
 }
 
+// ── Líneas base ───────────────────────────────────────────────────────────────
+
+/** Líneas base de un proyecto, ordenadas por versión ascendente. */
+export async function listBaselines(projectId: string): Promise<Baseline[]> {
+  const list = await db.baselines.where('projectId').equals(projectId).toArray();
+  return list.sort((a, b) => a.version - b.version);
+}
+
+/**
+ * Congela una nueva línea base: la marca como activa y desactiva las demás del
+ * proyecto, en una sola transacción.
+ */
+export async function freezeBaseline(baseline: Baseline): Promise<void> {
+  await db.transaction('rw', db.baselines, async () => {
+    const previas = await db.baselines.where('projectId').equals(baseline.projectId).toArray();
+    for (const b of previas) {
+      if (b.activa) await db.baselines.update(b.id, { activa: false });
+    }
+    await db.baselines.put(baseline);
+  });
+}
+
+export async function deleteBaseline(id: string): Promise<void> {
+  await db.baselines.delete(id);
+}
+
 // ── Utilidades ────────────────────────────────────────────────────────────────
 
 export function countProjects(): Promise<number> {
@@ -77,11 +103,20 @@ export function countProjects(): Promise<number> {
 export async function bulkInsert(
   projects: Project[],
   workPackages: WorkPackage[],
-  progressEntries: ProgressEntry[]
+  progressEntries: ProgressEntry[],
+  baselines: Baseline[] = []
 ): Promise<void> {
-  await db.transaction('rw', db.projects, db.workPackages, db.progressEntries, async () => {
-    await db.projects.bulkPut(projects);
-    await db.workPackages.bulkPut(workPackages);
-    await db.progressEntries.bulkPut(progressEntries);
-  });
+  await db.transaction(
+    'rw',
+    db.projects,
+    db.workPackages,
+    db.progressEntries,
+    db.baselines,
+    async () => {
+      await db.projects.bulkPut(projects);
+      await db.workPackages.bulkPut(workPackages);
+      await db.progressEntries.bulkPut(progressEntries);
+      await db.baselines.bulkPut(baselines);
+    }
+  );
 }

@@ -1,6 +1,6 @@
 import type { CurvePoint } from '../../analytics/resolve';
 import { plannedValue, sCurve } from '../../core/evm';
-import type { Project, WorkPackage } from '../../core/types';
+import type { PlannedItem, Project } from '../../core/types';
 import { money } from '../format';
 import { Panel, SectionHead } from './primitives';
 
@@ -22,12 +22,14 @@ function isoAtFraction(startIso: string, endIso: string, t: number): string {
  */
 export function SCurveChart({
   project,
-  workPackages,
+  planItems,
+  bac,
   dataDate,
   history,
 }: {
   project: Project;
-  workPackages: readonly WorkPackage[];
+  planItems: readonly PlannedItem[];
+  bac: number;
   dataDate: string;
   history: CurvePoint[];
 }) {
@@ -41,7 +43,7 @@ export function SCurveChart({
 
   const tOf = (iso: string) => (Date.parse(iso) - startMs) / span;
   const x = (t: number) => PAD.left + Math.max(0, Math.min(1, t)) * plotW;
-  const y = (v: number) => PAD.top + (1 - v / project.bac) * plotH;
+  const y = (v: number) => PAD.top + (1 - v / bac) * plotH;
 
   // Curva S de PV a lo largo del cronograma completo.
   const N = 48;
@@ -49,7 +51,7 @@ export function SCurveChart({
   for (let i = 0; i <= N; i++) {
     const t = i / N;
     const date = isoAtFraction(project.fechaInicio, project.fechaFinPlan, t);
-    pvPts.push(`${i === 0 ? 'M' : 'L'}${x(t).toFixed(1)},${y(plannedValue(workPackages, date, sCurve)).toFixed(1)}`);
+    pvPts.push(`${i === 0 ? 'M' : 'L'}${x(t).toFixed(1)},${y(plannedValue(planItems, date, sCurve)).toFixed(1)}`);
   }
   const pvPath = pvPts.join(' ');
 
@@ -87,9 +89,9 @@ export function SCurveChart({
       <div className="px-3 py-4">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Curva S del proyecto">
           {/* BAC (tope) y baseline. */}
-          <line x1={PAD.left} y1={y(project.bac)} x2={PAD.left + plotW} y2={y(project.bac)} stroke="#C3CDD4" strokeDasharray="3 4" />
-          <text x={PAD.left} y={y(project.bac) - 6} className="num" fontSize="11" fill="#256B7E">
-            BAC {money(project.bac, cur)}
+          <line x1={PAD.left} y1={y(bac)} x2={PAD.left + plotW} y2={y(bac)} stroke="#C3CDD4" strokeDasharray="3 4" />
+          <text x={PAD.left} y={y(bac) - 6} className="num" fontSize="11" fill="#256B7E">
+            BAC {money(bac, cur)}
           </text>
           <line x1={PAD.left} y1={y(0)} x2={PAD.left + plotW} y2={y(0)} stroke="#C3CDD4" />
 

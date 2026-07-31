@@ -1,4 +1,11 @@
 import { useMemo } from 'react';
+import {
+  activeBaseline,
+  diffBaseline,
+  effectiveBac,
+  effectivePlanItem,
+  type BaselineDivergence,
+} from '../analytics/baseline';
 import { analyzeProject, type ProjectAnalysis } from '../analytics/decisions';
 import {
   allCutDates,
@@ -6,9 +13,10 @@ import {
   evmHistory,
   vigenteByWp,
   type CurvePoint,
+  type EffectiveItem,
 } from '../analytics/resolve';
 import { scheduleForecast, type ScheduleForecast } from '../analytics/schedule';
-import type { Project } from '../core/types';
+import type { Baseline, PlannedItem, Project } from '../core/types';
 import { usePmStore } from './pmStore';
 
 export interface ProjectView {
@@ -17,6 +25,14 @@ export interface ProjectView {
   history: CurvePoint[];
   /** Pronóstico de plazo por Earned Schedule. */
   forecast: ScheduleForecast;
+  /** Ítems de plan efectivos (línea base si hay) y BAC de referencia. */
+  planItems: PlannedItem[];
+  bac: number;
+  /** Línea base activa (o `undefined`) y todas las del proyecto. */
+  baseline: Baseline | undefined;
+  baselines: Baseline[];
+  /** Divergencia entre la estructura viva y la línea base activa. */
+  divergence: BaselineDivergence;
   /** Todas las fechas de corte disponibles del proyecto (para el selector). */
   availableCuts: string[];
   dataDate: string;
@@ -32,28 +48,42 @@ export function useProjectView(): ProjectView | null {
   const selectedProjectId = usePmStore((s) => s.selectedProjectId);
   const workPackages = usePmStore((s) => s.workPackages);
   const progressEntries = usePmStore((s) => s.progressEntries);
+  const baselines = usePmStore((s) => s.baselines);
   const dataDate = usePmStore((s) => s.dataDate);
 
   return useMemo(() => {
     const project = projects.find((p) => p.id === selectedProjectId);
     if (!project || !dataDate) return null;
 
+    const baseline = activeBaseline(baselines);
     const vigentes = vigenteByWp(progressEntries, dataDate);
-    const analysis = analyzeProject(project, workPackages, vigentes, dataDate);
+    const analysis = analyzeProject(project, workPackages, vigentes, dataDate, baseline);
+
+    // Ítems efectivos (línea base si hay foto del paquete, o vivo si no).
+    const effectiveItems: EffectiveItem[] = workPackages.map((wp) => ({
+      id: wp.id,
+      ...effectivePlanItem(wp, baseline),
+    }));
+    const bac = effectiveBac(workPackages, baseline);
 
     // Historia para la curva: fechas de corte hasta la fecha elegida.
     const dates = cutDatesUpTo(progressEntries, dataDate);
-    const history = evmHistory(workPackages, progressEntries, dates.length ? dates : [dataDate]);
+    const history = evmHistory(effectiveItems, progressEntries, dates.length ? dates : [dataDate]);
 
-    const forecast = scheduleForecast(project, workPackages, analysis.evm.ev, dataDate);
+    const forecast = scheduleForecast(project, effectiveItems, bac, analysis.evm.ev, dataDate);
 
     return {
       project,
       analysis,
       history,
       forecast,
+      planItems: effectiveItems,
+      bac,
+      baseline,
+      baselines,
+      divergence: diffBaseline(baseline, workPackages),
       availableCuts: allCutDates(progressEntries),
       dataDate,
     };
-  }, [projects, selectedProjectId, workPackages, progressEntries, dataDate]);
+  }, [projects, selectedProjectId, workPackages, progressEntries, baselines, dataDate]);
 }

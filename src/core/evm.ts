@@ -15,6 +15,7 @@ import type {
   EacMethod,
   EvmInputs,
   EvmResult,
+  PlannedItem,
   ProgressEntry,
   WorkPackage,
 } from './types';
@@ -135,9 +136,9 @@ export function tcpiToEac(
 // los reportes de avance a una fecha de corte.
 // ────────────────────────────────────────────────────────────────────────────
 
-/** Suma de presupuestos de un conjunto de paquetes (= BAC del subconjunto). */
-export function budgetAtCompletion(workPackages: readonly WorkPackage[]): number {
-  return workPackages.reduce((acc, wp) => acc + wp.presupuesto, 0);
+/** Suma de presupuestos de un conjunto de ítems (= BAC del subconjunto). */
+export function budgetAtCompletion(items: readonly PlannedItem[]): number {
+  return items.reduce((acc, it) => acc + it.presupuesto, 0);
 }
 
 /**
@@ -170,12 +171,12 @@ export const sCurve: ProgressCurve = (t) => t * t * (3 - 2 * t);
  * antes de esa fecha y 1 desde esa fecha en adelante.
  */
 export function plannedFraction(
-  wp: WorkPackage,
+  item: PlannedItem,
   dataDate: string,
   curve: ProgressCurve = sCurve
 ): number {
-  const start = Date.parse(wp.fechaInicioPlan);
-  const end = Date.parse(wp.fechaFinPlan);
+  const start = Date.parse(item.fechaInicioPlan);
+  const end = Date.parse(item.fechaFinPlan);
   const now = Date.parse(dataDate);
 
   if (now <= start) return 0;
@@ -187,45 +188,50 @@ export function plannedFraction(
 
 /**
  * Planned Value (BCWS) del conjunto a una fecha de corte:
- * Σ presupuesto_wp × fracciónPlanificada(wp, fecha, curve).
+ * Σ presupuesto × fracciónPlanificada(ítem, fecha, curve).
+ * Opera sobre paquetes vivos o sobre ítems de una línea base indistintamente.
  */
 export function plannedValue(
-  workPackages: readonly WorkPackage[],
+  items: readonly PlannedItem[],
   dataDate: string,
   curve: ProgressCurve = sCurve
 ): number {
-  return workPackages.reduce(
-    (acc, wp) => acc + wp.presupuesto * plannedFraction(wp, dataDate, curve),
+  return items.reduce(
+    (acc, it) => acc + it.presupuesto * plannedFraction(it, dataDate, curve),
     0
   );
 }
 
+/** Ítem sobre el que se puede devengar valor: id + presupuesto de referencia. */
+type EarnableItem = Pick<WorkPackage, 'id' | 'presupuesto'>;
+
 /**
- * Earned Value (BCWP) del conjunto: Σ presupuesto_wp × avanceFísico_wp.
+ * Earned Value (BCWP) del conjunto: Σ presupuesto × avanceFísico.
  * `progressByWp` mapea id de paquete → su reporte de avance vigente a la fecha
- * de corte. Los paquetes sin reporte cuentan con avance 0.
+ * de corte. Los paquetes sin reporte cuentan con avance 0. El presupuesto es el
+ * de referencia (línea base si hay, o vivo si no), no el costo real.
  */
 export function earnedValue(
-  workPackages: readonly WorkPackage[],
+  items: readonly EarnableItem[],
   progressByWp: ReadonlyMap<string, ProgressEntry>
 ): number {
-  return workPackages.reduce((acc, wp) => {
-    const entry = progressByWp.get(wp.id);
+  return items.reduce((acc, it) => {
+    const entry = progressByWp.get(it.id);
     const avance = entry ? entry.avanceFisico : 0;
-    return acc + wp.presupuesto * avance;
+    return acc + it.presupuesto * avance;
   }, 0);
 }
 
 /**
- * Actual Cost (ACWP) del conjunto: Σ costoRealAcum_wp.
+ * Actual Cost (ACWP) del conjunto: Σ costoRealAcum de los paquetes indicados.
  * Los paquetes sin reporte cuentan con costo 0.
  */
 export function actualCost(
-  workPackages: readonly WorkPackage[],
+  items: readonly Pick<WorkPackage, 'id'>[],
   progressByWp: ReadonlyMap<string, ProgressEntry>
 ): number {
-  return workPackages.reduce((acc, wp) => {
-    const entry = progressByWp.get(wp.id);
+  return items.reduce((acc, it) => {
+    const entry = progressByWp.get(it.id);
     return acc + (entry ? entry.costoRealAcum : 0);
   }, 0);
 }

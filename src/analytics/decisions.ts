@@ -8,16 +8,16 @@
  * de verdad de los indicadores.
  */
 
-import {
-  actualCost,
-  budgetAtCompletion,
-  computeEvm,
-  earnedValue,
-  plannedFraction,
-  plannedValue,
-  sCurve,
-} from '../core/evm';
-import type { EvmInputs, EvmResult, ProgressEntry, Project, WorkPackage } from '../core/types';
+import { computeEvm, plannedFraction, sCurve } from '../core/evm';
+import type {
+  Baseline,
+  EvmInputs,
+  EvmResult,
+  ProgressEntry,
+  Project,
+  WorkPackage,
+} from '../core/types';
+import { effectiveBac, effectivePlanItem } from './baseline';
 import { classifyIndex, worstStatus, type Status } from './status';
 
 export interface WorkPackageAnalysis {
@@ -58,17 +58,22 @@ export interface ProjectAnalysis {
   decisiones: DecisionItem[];
 }
 
-/** Construye los insumos EVM de un paquete a la fecha de corte. */
+/**
+ * Construye los insumos EVM de un paquete a la fecha de corte, midiendo contra
+ * el plan efectivo (línea base si hay foto de este paquete, o vivo si no).
+ */
 function inputsForWp(
   wp: WorkPackage,
   progress: ProgressEntry | undefined,
-  dataDate: string
+  dataDate: string,
+  baseline: Baseline | undefined
 ): EvmInputs {
+  const plan = effectivePlanItem(wp, baseline);
   return {
-    pv: wp.presupuesto * plannedFraction(wp, dataDate, sCurve),
-    ev: wp.presupuesto * (progress?.avanceFisico ?? 0),
+    pv: plan.presupuesto * plannedFraction(plan, dataDate, sCurve),
+    ev: plan.presupuesto * (progress?.avanceFisico ?? 0),
     ac: progress?.costoRealAcum ?? 0,
-    bac: wp.presupuesto,
+    bac: plan.presupuesto,
   };
 }
 
@@ -82,9 +87,10 @@ function exposicionDe(evm: EvmResult): number {
 function analyzeWp(
   wp: WorkPackage,
   progress: ProgressEntry | undefined,
-  dataDate: string
+  dataDate: string,
+  baseline: Baseline | undefined
 ): WorkPackageAnalysis {
-  const inputs = inputsForWp(wp, progress, dataDate);
+  const inputs = inputsForWp(wp, progress, dataDate, baseline);
   const evm = computeEvm(inputs);
   const spiStatus = classifyIndex(evm.spi);
   const cpiStatus = classifyIndex(evm.cpi);
@@ -141,21 +147,29 @@ function signedMoney(value: number | null, currency: string): string {
   return value < 0 ? `−${s}` : `+${s}`;
 }
 
-/** Analiza el proyecto completo: consolidado + por paquete + decisiones. */
+/**
+ * Analiza el proyecto completo: consolidado + por paquete + decisiones.
+ * Si se pasa una línea base activa, PV/EV/BAC se miden contra ella; si no, se
+ * usa el plan vivo como referencia provisoria.
+ */
 export function analyzeProject(
   project: Project,
   workPackages: readonly WorkPackage[],
   progressByWp: ReadonlyMap<string, ProgressEntry>,
-  dataDate: string
+  dataDate: string,
+  baseline?: Baseline
 ): ProjectAnalysis {
-  const packages = workPackages.map((wp) => analyzeWp(wp, progressByWp.get(wp.id), dataDate));
+  const packages = workPackages.map((wp) =>
+    analyzeWp(wp, progressByWp.get(wp.id), dataDate, baseline)
+  );
 
-  // Consolidado: sumamos las curvas de todos los paquetes.
+  // Consolidado: suma de los insumos por paquete (así reconcilia con el detalle
+  // y con la línea base). El BAC es el de referencia (base activa o suma viva).
   const consolidated: EvmInputs = {
-    pv: plannedValue(workPackages, dataDate, sCurve),
-    ev: earnedValue(workPackages, progressByWp),
-    ac: actualCost(workPackages, progressByWp),
-    bac: budgetAtCompletion(workPackages),
+    pv: packages.reduce((acc, a) => acc + a.inputs.pv, 0),
+    ev: packages.reduce((acc, a) => acc + a.inputs.ev, 0),
+    ac: packages.reduce((acc, a) => acc + a.inputs.ac, 0),
+    bac: effectiveBac(workPackages, baseline),
   };
   const evm = computeEvm(consolidated);
 

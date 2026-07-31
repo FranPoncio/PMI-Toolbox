@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { ProgressEntry, Project, WorkPackage } from '../core/types';
+import type { Baseline, ProgressEntry, Project, WorkPackage } from '../core/types';
+import { buildBaselineSnapshot } from '../analytics/baseline';
 import { allCutDates } from '../analytics/resolve';
 import { newId } from '../db/db';
 import { seedIfEmpty } from '../db/seed';
@@ -11,6 +12,7 @@ interface PmState {
   selectedProjectId: string | null;
   workPackages: WorkPackage[];
   progressEntries: ProgressEntry[];
+  baselines: Baseline[];
   /** Fecha de corte con la que se mira el proyecto. */
   dataDate: string | null;
 
@@ -26,6 +28,10 @@ interface PmState {
 
   saveProgress: (data: Omit<ProgressEntry, 'id'> & { id?: string }) => Promise<void>;
   removeProgress: (id: string) => Promise<void>;
+
+  /** Congela una nueva línea base (versión siguiente) y la deja activa. */
+  freezeBaseline: (fechaAprobacion: string, motivo: string) => Promise<void>;
+  removeBaseline: (id: string) => Promise<void>;
 }
 
 /** Fecha de corte por defecto: el último corte cargado, o el inicio del proyecto. */
@@ -36,17 +42,18 @@ function defaultDataDate(project: Project | undefined, entries: ProgressEntry[])
 }
 
 export const usePmStore = create<PmState>((set, get) => {
-  /** Recarga los paquetes y cortes del proyecto seleccionado. */
+  /** Recarga los paquetes, cortes y líneas base del proyecto seleccionado. */
   async function loadProjectData(projectId: string, keepDate = false) {
-    const [workPackages, progressEntries] = await Promise.all([
+    const [workPackages, progressEntries, baselines] = await Promise.all([
       repo.listWorkPackages(projectId),
       repo.listProgressForProject(projectId),
+      repo.listBaselines(projectId),
     ]);
     const project = get().projects.find((p) => p.id === projectId);
     const dataDate = keepDate
       ? (get().dataDate ?? defaultDataDate(project, progressEntries))
       : defaultDataDate(project, progressEntries);
-    set({ workPackages, progressEntries, dataDate });
+    set({ workPackages, progressEntries, baselines, dataDate });
   }
 
   return {
@@ -55,6 +62,7 @@ export const usePmStore = create<PmState>((set, get) => {
     selectedProjectId: null,
     workPackages: [],
     progressEntries: [],
+    baselines: [],
     dataDate: null,
 
     async init() {
@@ -100,7 +108,13 @@ export const usePmStore = create<PmState>((set, get) => {
       set({ projects });
       if (get().selectedProjectId === id) {
         const next = projects[0]?.id ?? null;
-        set({ selectedProjectId: next, workPackages: [], progressEntries: [], dataDate: null });
+        set({
+          selectedProjectId: next,
+          workPackages: [],
+          progressEntries: [],
+          baselines: [],
+          dataDate: null,
+        });
         if (next) await loadProjectData(next);
       }
     },
@@ -127,6 +141,28 @@ export const usePmStore = create<PmState>((set, get) => {
 
     async removeProgress(id) {
       await repo.deleteProgressEntry(id);
+      const pid = get().selectedProjectId;
+      if (pid) await loadProjectData(pid, true);
+    },
+
+    async freezeBaseline(fechaAprobacion, motivo) {
+      const pid = get().selectedProjectId;
+      const project = get().projects.find((p) => p.id === pid);
+      if (!project) return;
+      const version = get().baselines.reduce((max, b) => Math.max(max, b.version), 0) + 1;
+      const snapshot = buildBaselineSnapshot(
+        project,
+        get().workPackages,
+        version,
+        fechaAprobacion,
+        motivo
+      );
+      await repo.freezeBaseline({ ...snapshot, id: newId() });
+      await loadProjectData(project.id, true);
+    },
+
+    async removeBaseline(id) {
+      await repo.deleteBaseline(id);
       const pid = get().selectedProjectId;
       if (pid) await loadProjectData(pid, true);
     },

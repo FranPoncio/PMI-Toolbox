@@ -33,7 +33,7 @@ function num(n: number | null, digits = 2): number | null {
 
 /** Construye el contenido CSV del corte actual. */
 export function buildCsv(view: ProjectView): string {
-  const { project, analysis, forecast, dataDate } = view;
+  const { project, analysis, forecast, baseline, dataDate } = view;
   const rows: Array<Array<string | number | null>> = [];
 
   rows.push(['PMI Toolbox — Reporte EVM']);
@@ -41,6 +41,10 @@ export function buildCsv(view: ProjectView): string {
   rows.push(['Tipo', project.tipo]);
   rows.push(['Moneda', project.moneda]);
   rows.push(['Fecha de corte', dataDate]);
+  rows.push([
+    'Línea base',
+    baseline ? `v${baseline.version} (${baseline.fechaAprobacion})` : 'sin línea base',
+  ]);
   rows.push(['BAC', round(analysis.evm.bac)]);
   rows.push([]);
 

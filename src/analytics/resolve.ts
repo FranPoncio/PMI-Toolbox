@@ -10,7 +10,13 @@ import {
   plannedValue,
   sCurve,
 } from '../core/evm';
-import type { ProgressEntry, WorkPackage } from '../core/types';
+import type { PlannedItem, ProgressEntry } from '../core/types';
+
+/**
+ * Ítem efectivo para las curvas: id + presupuesto de referencia + ventana de
+ * plan. Es lo que se mide (línea base si hay foto del paquete, o vivo si no).
+ */
+export type EffectiveItem = PlannedItem & { id: string };
 
 /** Corte vigente por paquete a una fecha: el más reciente con fecha ≤ dataDate. */
 export function vigenteByWp(
@@ -53,10 +59,12 @@ export interface CurvePoint {
 
 /**
  * Serie temporal de PV/EV/AC del proyecto a lo largo de las fechas de corte
- * indicadas. Para cada fecha usa el corte vigente de cada paquete.
+ * indicadas. Para cada fecha usa el corte vigente de cada paquete. Los `items`
+ * son los efectivos (línea base si hay), así la historia reconcilia con el
+ * consolidado.
  */
 export function evmHistory(
-  workPackages: readonly WorkPackage[],
+  items: readonly EffectiveItem[],
   entries: readonly ProgressEntry[],
   dates: readonly string[]
 ): CurvePoint[] {
@@ -64,9 +72,9 @@ export function evmHistory(
     const vig = vigenteByWp(entries, date);
     return {
       date,
-      pv: plannedValue(workPackages, date, sCurve),
-      ev: earnedValue(workPackages, vig),
-      ac: actualCost(workPackages, vig),
+      pv: plannedValue(items, date, sCurve),
+      ev: earnedValue(items, vig),
+      ac: actualCost(items, vig),
     };
   });
 }

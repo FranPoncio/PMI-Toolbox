@@ -10,6 +10,7 @@ import { WorkPackageTable } from './components/WorkPackageTable';
 import { StatusPill } from './components/primitives';
 import { Button, Select } from './components/fields';
 import { Modal } from './components/Modal';
+import { BaselineModal } from './forms/BaselineModal';
 import { DataModal } from './forms/DataModal';
 import { ProgressForm } from './forms/ProgressForm';
 import { ProjectForm } from './forms/ProjectForm';
@@ -22,7 +23,7 @@ const TIPO_LABEL: Record<string, string> = {
   servicios: 'Servicios',
 };
 
-type Dialog = 'progress' | 'data' | 'newProject' | null;
+type Dialog = 'progress' | 'data' | 'baseline' | 'newProject' | null;
 
 export function Dashboard() {
   const init = usePmStore((s) => s.init);
@@ -78,6 +79,11 @@ export function Dashboard() {
           {view && <Button onClick={() => setDialog('progress')}>＋ Corte</Button>}
           {view && <Button onClick={() => setDialog('data')}>Datos</Button>}
           {view && (
+            <Button onClick={() => setDialog('baseline')}>
+              {view.baseline ? `Línea base v${view.baseline.version}` : 'Línea base'}
+            </Button>
+          )}
+          {view && (
             <Button
               onClick={() =>
                 downloadCsv(
@@ -119,6 +125,15 @@ export function Dashboard() {
           onClose={() => setDialog(null)}
         />
       )}
+      {dialog === 'baseline' && view && (
+        <BaselineModal
+          project={view.project}
+          baseline={view.baseline}
+          baselines={view.baselines}
+          divergence={view.divergence}
+          onClose={() => setDialog(null)}
+        />
+      )}
     </div>
   );
 }
@@ -130,7 +145,8 @@ function ProjectDashboard({
   view: NonNullable<ReturnType<typeof useProjectView>>;
   onLoadCut: () => void;
 }) {
-  const { project, analysis, history, forecast, dataDate } = view;
+  const { project, analysis, history, forecast, planItems, bac, baseline, divergence, dataDate } =
+    view;
   const workPackages = usePmStore((s) => s.workPackages);
   const conclusion = buildConclusion(analysis);
   const cur = project.moneda;
@@ -147,6 +163,17 @@ function ProjectDashboard({
             <span className="text-tech/40">·</span>
             <span>
               Fecha de corte: <span className="num">{dataDate}</span>
+            </span>
+            <span className="text-tech/40">·</span>
+            <span>
+              {baseline ? (
+                <>
+                  Línea base <span className="num">v{baseline.version}</span> ({baseline.fechaAprobacion})
+                  {divergence.cambio && <span className="text-amber"> · WBS diverge</span>}
+                </>
+              ) : (
+                <span className="text-amber">Sin línea base</span>
+              )}
             </span>
           </div>
         </div>
@@ -179,7 +206,8 @@ function ProjectDashboard({
           <SchedulePanel forecast={forecast} />
           <SCurveChart
             project={project}
-            workPackages={workPackages}
+            planItems={planItems}
+            bac={bac}
             dataDate={dataDate}
             history={history}
           />

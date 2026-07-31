@@ -10,8 +10,8 @@ import {
   scheduleVarianceTime,
   spiTime,
 } from '../core/earnedSchedule';
-import { budgetAtCompletion, plannedValue, sCurve } from '../core/evm';
-import type { IsoDate, Project, WorkPackage } from '../core/types';
+import { plannedValue, sCurve } from '../core/evm';
+import type { IsoDate, PlannedItem, Project } from '../core/types';
 
 const DAY = 86_400_000;
 const MONTH_DAYS = 30.436875; // días promedio por mes
@@ -49,10 +49,12 @@ export interface ScheduleForecast {
 /**
  * Calcula el pronóstico de plazo del proyecto a una fecha de corte, usando la
  * curva S de PV como referencia temporal y el EV consolidado (`evNow`).
+ * `planItems` y `bac` son los de referencia (línea base activa si hay).
  */
 export function scheduleForecast(
   project: Project,
-  workPackages: readonly WorkPackage[],
+  planItems: readonly PlannedItem[],
+  bac: number,
   evNow: number,
   dataDate: string
 ): ScheduleForecast {
@@ -64,8 +66,7 @@ export function scheduleForecast(
   const pdDays = Math.max(0, (endMs - startMs) / DAY);
   const atDays = Math.max(0, (Date.parse(dataDate) - startMs) / DAY);
 
-  const bac = budgetAtCompletion(workPackages);
-  const pvAt = (t: number) => plannedValue(workPackages, isoAtFraction(start, end, t), sCurve);
+  const pvAt = (t: number) => plannedValue(planItems, isoAtFraction(start, end, t), sCurve);
   const esFrac = earnedScheduleFraction(pvAt, evNow, bac);
   const esDays = esFrac * pdDays;
 

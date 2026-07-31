@@ -4,13 +4,15 @@
  * evolución real de EV y AC en el tiempo.
  */
 
-import type { ProgressEntry } from '../core/types';
+import type { Baseline, ProgressEntry } from '../core/types';
+import { buildBaselineSnapshot } from '../analytics/baseline';
 import {
   DATA_DATE,
   finalProgress,
   project,
   workPackages,
 } from '../fixtures/gasoducto';
+import { newId } from './db';
 import { bulkInsert, countProjects } from './repository';
 
 /** Fechas de corte del ejemplo (mensuales) hasta la fecha de corte final. */
@@ -61,6 +63,19 @@ function buildHistory(): ProgressEntry[] {
 /** Carga el ejemplo sólo si no hay proyectos. Devuelve true si sembró. */
 export async function seedIfEmpty(): Promise<boolean> {
   if ((await countProjects()) > 0) return false;
-  await bulkInsert([project], [...workPackages], buildHistory());
+
+  // Línea base v1 aprobada al inicio del proyecto.
+  const baseline: Baseline = {
+    ...buildBaselineSnapshot(
+      project,
+      workPackages,
+      1,
+      project.fechaInicio,
+      'Línea base inicial aprobada'
+    ),
+    id: newId(),
+  };
+
+  await bulkInsert([project], [...workPackages], buildHistory(), [baseline]);
   return true;
 }

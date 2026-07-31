@@ -58,6 +58,50 @@ export interface ProgressEntry {
   costoRealAcum: number;
 }
 
+/**
+ * Campos mínimos para calcular el valor planificado (PV) de un ítem: su
+ * presupuesto y su ventana temporal. Tanto `WorkPackage` como `BaselineItem`
+ * lo satisfacen, así el motor calcula PV indistintamente sobre el plan vivo o
+ * sobre la línea base congelada.
+ */
+export type PlannedItem = Pick<WorkPackage, 'presupuesto' | 'fechaInicioPlan' | 'fechaFinPlan'>;
+
+// ────────────────────────────────────────────────────────────────────────────
+// Línea base (Performance Measurement Baseline)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Foto congelada de un paquete dentro de una línea base. */
+export interface BaselineItem {
+  workPackageId: string;
+  /** Nombre al momento de congelar (se conserva aunque el paquete se borre). */
+  nombre: string;
+  presupuesto: number;
+  peso: number;
+  fechaInicioPlan: IsoDate;
+  fechaFinPlan: IsoDate;
+}
+
+/**
+ * Línea base aprobada: la referencia contra la que se mide el desempeño. Una
+ * vez congelada no se toca; un cambio de alcance exige una nueva versión
+ * (rebaselining), quedando el historial completo para auditoría.
+ */
+export interface Baseline {
+  id: string;
+  projectId: string;
+  /** Versión incremental (1, 2, 3…). */
+  version: number;
+  /** Fecha de aprobación de esta línea base. */
+  fechaAprobacion: IsoDate;
+  /** Motivo (especialmente en re-baselines: por qué se cambió la base). */
+  motivo: string;
+  /** BAC congelado (suma de presupuestos de los ítems al momento de congelar). */
+  bac: number;
+  /** ¿Es la línea base vigente del proyecto? */
+  activa: boolean;
+  items: BaselineItem[];
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Motor EVM
 // ────────────────────────────────────────────────────────────────────────────
