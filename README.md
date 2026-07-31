@@ -32,8 +32,12 @@ infraestructura y del reporte a organismos multilaterales de crédito.
 6. **Multiproyecto con persistencia local.** Crear/editar proyectos y paquetes,
    cargar cortes de avance y mirar el proyecto a **cualquier fecha de corte
    histórica**. Todo guardado en el navegador (IndexedDB).
-7. **Export a CSV.** El corte actual (consolidado + plazo + detalle por paquete)
-   listo para adjuntar a un informe o abrir en Excel.
+7. **Import de cronograma (CSV).** Traé la WBS/cronograma desde Excel / MS
+   Project / P6 exportado a CSV; tolera fechas `DD/MM/AAAA` y separadores de
+   miles, con **previsualización y validación** antes de importar.
+8. **Export a CSV y reporte PDF.** El corte actual sale a CSV para Excel, o a un
+   **reporte imprimible** (conclusión + decisión + consolidado + plazo + curva S
+   + detalle) que el navegador guarda como PDF para el comité.
 
 ### Reglas de diseño de la interfaz
 
@@ -198,8 +202,8 @@ En orden de valor para el perfil PMO / control de proyectos:
 - [x] Earned Schedule (pronóstico de fecha de fin)
 - [x] Export a CSV
 - [x] **Línea base congelada** + rebaselining con historial y divergencia
-- [ ] **Reporte PDF** para comité de dirección
-- [ ] Import de cronograma (MS Project / P6 / CSV) para el time-phasing real
+- [x] **Reporte PDF** para comité (vía impresión del navegador)
+- [x] **Import de cronograma** CSV (Excel / MS Project / P6) con validación
 - [ ] Backend multiusuario con trazabilidad (quién cargó qué corte)
 - [ ] WBS jerárquica (proyecto → subproyecto → paquete → cuenta de control)
 - [ ] Notificación a Slack cuando un paquete cruza a "desvío"

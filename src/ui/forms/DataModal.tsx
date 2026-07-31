@@ -4,10 +4,15 @@ import { usePmStore } from '../../store/pmStore';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/fields';
 import { money } from '../format';
+import { ImportModal } from './ImportModal';
 import { ProjectForm } from './ProjectForm';
 import { WorkPackageForm } from './WorkPackageForm';
 
-type View = { kind: 'list' } | { kind: 'project' } | { kind: 'wp'; wp?: WorkPackage };
+type View =
+  | { kind: 'list' }
+  | { kind: 'project' }
+  | { kind: 'wp'; wp?: WorkPackage }
+  | { kind: 'import' };
 
 /** Editor de datos del proyecto: sus paquetes de trabajo y sus atributos. */
 export function DataModal({
@@ -38,6 +43,9 @@ export function DataModal({
       </Modal>
     );
   }
+  if (view.kind === 'import') {
+    return <ImportModal project={project} onClose={() => setView({ kind: 'list' })} />;
+  }
 
   return (
     <Modal title={`Datos · ${project.nombre}`} onClose={onClose} wide>
@@ -51,6 +59,7 @@ export function DataModal({
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setView({ kind: 'project' })}>Editar proyecto</Button>
+          <Button onClick={() => setView({ kind: 'import' })}>Importar CSV</Button>
           <Button variant="primary" onClick={() => setView({ kind: 'wp' })}>
             ＋ Paquete
           </Button>

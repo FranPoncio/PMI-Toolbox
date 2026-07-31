@@ -26,6 +26,9 @@ interface PmState {
   saveWorkPackage: (data: Omit<WorkPackage, 'id'> & { id?: string }) => Promise<void>;
   removeWorkPackage: (id: string) => Promise<void>;
 
+  /** Alta en bloque de paquetes desde un import (se les asigna id y projectId). */
+  importWorkPackages: (drafts: Omit<WorkPackage, 'id' | 'projectId'>[]) => Promise<void>;
+
   saveProgress: (data: Omit<ProgressEntry, 'id'> & { id?: string }) => Promise<void>;
   removeProgress: (id: string) => Promise<void>;
 
@@ -130,6 +133,14 @@ export const usePmStore = create<PmState>((set, get) => {
       await repo.deleteWorkPackage(id);
       const pid = get().selectedProjectId;
       if (pid) await loadProjectData(pid, true);
+    },
+
+    async importWorkPackages(drafts) {
+      const pid = get().selectedProjectId;
+      if (!pid || drafts.length === 0) return;
+      const wps: WorkPackage[] = drafts.map((d) => ({ ...d, id: newId(), projectId: pid }));
+      await repo.bulkPutWorkPackages(wps);
+      await loadProjectData(pid, true);
     },
 
     async saveProgress(data) {

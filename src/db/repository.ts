@@ -41,6 +41,11 @@ export async function putWorkPackage(wp: WorkPackage): Promise<void> {
   await db.workPackages.put(wp);
 }
 
+/** Alta en bloque de paquetes (usado por el import de cronograma). */
+export async function bulkPutWorkPackages(wps: WorkPackage[]): Promise<void> {
+  await db.workPackages.bulkPut(wps);
+}
+
 /** Borra un paquete y sus cortes de avance. */
 export async function deleteWorkPackage(id: string): Promise<void> {
   await db.transaction('rw', db.workPackages, db.progressEntries, async () => {

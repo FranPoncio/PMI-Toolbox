@@ -35,3 +35,31 @@ body {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
+
+/* Impresión / Guardar PDF: sólo se imprime la vista de reporte. */
+@media print {
+  body {
+    background: #fff;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .report-overlay,
+  .report-overlay * {
+    visibility: visible;
+  }
+  .report-overlay {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .avoid-break {
+    break-inside: avoid;
+  }
+  @page {
+    margin: 14mm;
+  }
+}

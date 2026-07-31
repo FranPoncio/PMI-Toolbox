@@ -14,6 +14,7 @@ import { BaselineModal } from './forms/BaselineModal';
 import { DataModal } from './forms/DataModal';
 import { ProgressForm } from './forms/ProgressForm';
 import { ProjectForm } from './forms/ProjectForm';
+import { Report } from './Report';
 import { buildCsv, downloadCsv } from './export';
 
 const TIPO_LABEL: Record<string, string> = {
@@ -23,7 +24,7 @@ const TIPO_LABEL: Record<string, string> = {
   servicios: 'Servicios',
 };
 
-type Dialog = 'progress' | 'data' | 'baseline' | 'newProject' | null;
+type Dialog = 'progress' | 'data' | 'baseline' | 'report' | 'newProject' | null;
 
 export function Dashboard() {
   const init = usePmStore((s) => s.init);
@@ -95,6 +96,7 @@ export function Dashboard() {
               Exportar
             </Button>
           )}
+          {view && <Button onClick={() => setDialog('report')}>Reporte</Button>}
           <Button variant="primary" onClick={() => setDialog('newProject')}>
             Nuevo proyecto
           </Button>
@@ -134,6 +136,7 @@ export function Dashboard() {
           onClose={() => setDialog(null)}
         />
       )}
+      {dialog === 'report' && view && <Report view={view} onClose={() => setDialog(null)} />}
     </div>
   );
 }
