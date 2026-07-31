@@ -2,7 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import type { ProgressEntry, Project, WorkPackage } from '../core/types';
 
 /**
- * Base de datos local de PMTool sobre IndexedDB (Dexie).
+ * Base de datos local de PMI Toolbox sobre IndexedDB (Dexie).
  *
  * Índices declarados: sólo los que se usan para consultar. El resto de los
  * campos viaja en el objeto pero no se indexa.

@@ -2,7 +2,7 @@
  * Motor de Earned Value Management (EVM).
  *
  * Funciones puras, sin React, sin estado, sin I/O. Toda la matemática de EVM
- * de PMTool vive acá y es la única fuente de verdad de los indicadores.
+ * de PMI Toolbox vive acá y es la única fuente de verdad de los indicadores.
  *
  * Regla de división por cero: cuando un indicador resulta de dividir por algo
  * que puede valer 0 (típicamente al arranque del proyecto, cuando PV/AC/EV son
@@ -154,7 +154,7 @@ export const linearCurve: ProgressCurve = (t) => t;
  * Curva S (smoothstep de Hermite: `3t² − 2t³`). Arranque lento, aceleración en
  * el medio y desaceleración al final — el perfil típico de una obra o proyecto
  * real. Es simétrica, con pendiente nula en ambos extremos y `curve(0.5) = 0.5`.
- * Es la curva por defecto de PMTool para el time-phasing del PV.
+ * Es la curva por defecto de PMI Toolbox para el time-phasing del PV.
  */
 export const sCurve: ProgressCurve = (t) => t * t * (3 - 2 * t);
 

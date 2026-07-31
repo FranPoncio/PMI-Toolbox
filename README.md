@@ -1,88 +1,202 @@
-# PMI Toolbox
+# 📊 PMI Toolbox
 
-Aplicación web de gestión de proyectos cuyo diferencial es un **motor completo
-de Earned Value Management (EVM)**, configurable por tipo de proyecto (obra
-civil, industrial, TI, servicios).
+Aplicación web de **gestión de proyectos con un motor completo de Earned Value
+Management (EVM)**, configurable por tipo de proyecto (obra civil, industrial,
+TI, servicios). Pensada para el analista de control de proyectos / PMO que
+reporta avance físico y costo contra una línea base — el idioma de la obra de
+infraestructura y del reporte a organismos multilaterales de crédito.
 
-> Estado: en construcción. Incluye el scaffolding, el motor EVM con tests, el
-> tablero, y la **persistencia local** (Dexie/IndexedDB) con estado (Zustand):
-> crear/editar proyectos y paquetes, cargar cortes de avance y mirar el
-> proyecto a cualquier fecha de corte.
+> **Estado:** en construcción activa. Ya funciona de punta a punta: motor de
+> cálculo testeado, tablero, persistencia local, pronóstico de plazo (Earned
+> Schedule) y export a CSV. Ver [Roadmap](#-roadmap).
 
-## Stack
+---
 
-React + Vite + TypeScript · Zustand · Tailwind · Dexie (IndexedDB) · Vitest.
+## ✨ Qué hace
 
-## Estructura
+1. **Motor EVM completo.** Calcula, a cualquier fecha de corte: PV, EV, AC, SV,
+   CV, SPI, CPI, las **tres variantes clásicas de EAC**, ETC, VAC y TCPI.
+2. **Pronóstico de plazo (Earned Schedule).** Traduce el avance ganado a
+   *tiempo* y proyecta una **fecha de finalización** — no solo el sobrecosto.
+3. **Panel "Requiere decisión".** Arriba de todo, ordenado por **exposición
+   económica**, con el **motivo explícito** de cada paquete fuera de plan.
+4. **Conclusión escrita primero.** Cada pantalla abre con un veredicto en
+   prosa; los gráficos vienen después, nunca antes.
+5. **Curva S.** Valor planificado (perfil S), ganado y real a lo largo de los
+   cortes, en una sola vista de líneas.
+6. **Multiproyecto con persistencia local.** Crear/editar proyectos y paquetes,
+   cargar cortes de avance y mirar el proyecto a **cualquier fecha de corte
+   histórica**. Todo guardado en el navegador (IndexedDB).
+7. **Export a CSV.** El corte actual (consolidado + plazo + detalle por paquete)
+   listo para adjuntar a un informe o abrir en Excel.
+
+### Reglas de diseño de la interfaz
+
+La interfaz sigue reglas deliberadas, pensadas para lectura de gestión:
+
+- 🧾 **Cada pantalla abre con una conclusión escrita**, no con gráficos.
+- ⚖️ **Ningún número absoluto sin su comparación contra plan** (SPI/CPI vs 1.00,
+  avance vs plan, EAC vs BAC, fin pronosticado vs planificado).
+- 🚫 **Nada de donuts ni gauges.** Sólo texto, tablas y una curva S de líneas.
+- 🔺 **El panel "Requiere decisión" va arriba**, ordenado por exposición, con el
+  motivo de cada ítem.
+- 🎨 **Tema claro, sobrio y de alta densidad** (aire de planilla de control):
+  Inter para interfaz e IBM Plex Mono para cifras; acentos con semántica fija
+  (ámbar = atención, rojo = desvío, verde = dentro de plan).
+
+---
+
+## 📐 Cómo funciona el cálculo
+
+### Indicadores EVM (`src/core/evm.ts`)
+
+Todas funciones **puras**, sin React, cubiertas por tests. A una fecha de corte:
+
+| Indicador | Fórmula | Nota |
+|-----------|---------|------|
+| **SV** | EV − PV | variación de plazo (en dinero) |
+| **CV** | EV − AC | variación de costo |
+| **SPI** | EV / PV | `null` si PV = 0 |
+| **CPI** | EV / AC | `null` si AC = 0 |
+| **EAC** (`cpi`) | BAC / CPI | el desvío de costo es sistémico |
+| **EAC** (`budgetRate`) | AC + (BAC − EV) | lo que falta se ejecuta al presupuesto original |
+| **EAC** (`cpiSpi`) | AC + (BAC − EV) / (CPI × SPI) | pondera costo y plazo |
+| **ETC** | EAC − AC | por variante |
+| **VAC** | BAC − EAC | por variante |
+| **TCPI** (BAC) | (BAC − EV) / (BAC − AC) | eficiencia necesaria para cerrar en presupuesto |
+| **TCPI** (EAC) | (BAC − EV) / (EAC − AC) | eficiencia necesaria para cerrar en el EAC |
+
+> **División por cero:** los indicadores indefinidos devuelven `null` (nunca
+> `Infinity` ni `NaN`). `null` significa *"sin información suficiente todavía"*,
+> que es distinto de un valor numérico.
+
+### Time-phasing con curva S
+
+El **Planned Value (PV)** se reparte en el tiempo con una **curva S** (smoothstep
+de Hermite, `3t² − 2t³`): arranque lento, aceleración en el medio y
+desaceleración al final — el perfil típico de una obra. Es intercambiable por
+`linearCurve` u otra `ProgressCurve`.
+
+### Earned Schedule (`src/core/earnedSchedule.ts`)
+
+El SV en dinero es engañoso: al final del proyecto tiende a 0 aunque se termine
+tardísimo. **Earned Schedule** traduce el avance a tiempo:
+
+- **ES** = el momento del plan en que estaba previsto haber ganado lo que hoy se
+  ganó (se halla invirtiendo la curva de PV: el `t` tal que `PV(t) = EV`).
+- **SV(t)** = ES − AT · **SPI(t)** = ES / AT · **IEAC(t)** = PD / SPI(t).
+- De ahí sale una **fecha de fin pronosticada**, comparada contra el plan.
+
+### Panel de decisión y exposición
+
+Cada paquete se clasifica (dentro de plan / atención / desvío) por su peor
+índice (SPI o CPI). Los que están fuera de plan se listan ordenados por
+**exposición** = sobrecosto proyectado a fin de paquete (VAC por CPI), con el
+motivo redactado automáticamente.
+
+---
+
+## 🗃️ Modelo de datos
+
+```
+Project        id · nombre · tipo · BAC · fechaInicio · fechaFinPlan · moneda
+WorkPackage    id · projectId · nombre · presupuesto · peso · fechas plan · responsable
+ProgressEntry  id · workPackageId · fechaCorte · avanceFisico (0..1) · costoRealAcum
+```
+
+Un paquete acumula **muchos** cortes en el tiempo; a una fecha dada, el "vigente"
+es el último corte con fecha ≤ esa fecha. Eso permite mirar el proyecto a
+cualquier fecha de corte histórica.
+
+---
+
+## 🧱 Arquitectura
 
 ```
 pmi-toolbox/
 ├─ src/
-│  ├─ core/          Lógica pura, sin React (fuente de verdad)
-│  │  ├─ types.ts    Modelo de datos + tipos del motor EVM
-│  │  ├─ evm.ts      Motor EVM (funciones puras)
-│  │  └─ evm.test.ts Tests del motor
-│  ├─ analytics/     Análisis derivado (estado, exposición, decisiones,
-│  │                 corte vigente e historia EV/AC)
-│  ├─ db/            Persistencia con Dexie (IndexedDB) + seed
-│  ├─ store/         Estado con Zustand + selectores derivados
-│  ├─ fixtures/      Datos de ejemplo (seed inicial)
-│  ├─ ui/            Interfaz (tablero, componentes y formularios)
-│  └─ test/setup.ts  Setup de testing-library
+│  ├─ core/            Lógica pura, sin React (fuente de verdad)
+│  │  ├─ types.ts          Modelo de datos + tipos del motor
+│  │  ├─ evm.ts            Motor EVM (PV/EV/AC, índices, EAC, TCPI, curva S)
+│  │  ├─ evm.test.ts       Tests del motor
+│  │  ├─ earnedSchedule.ts Earned Schedule (pronóstico de plazo)
+│  │  └─ earnedSchedule.test.ts
+│  ├─ analytics/       Análisis derivado (puro)
+│  │  ├─ decisions.ts      Consolidado, estado por paquete, ítems de decisión
+│  │  ├─ resolve.ts        Corte vigente por paquete + historia EV/AC
+│  │  ├─ schedule.ts       Fechas del pronóstico de plazo
+│  │  └─ status.ts         Clasificación y umbrales
+│  ├─ db/             Persistencia con Dexie (IndexedDB)
+│  │  ├─ db.ts             Esquema
+│  │  ├─ repository.ts     CRUD transaccional
+│  │  └─ seed.ts           Datos de ejemplo (con historia de cortes)
+│  ├─ store/          Estado con Zustand
+│  │  ├─ pmStore.ts        Carga async, selección y CRUD
+│  │  └─ selectors.ts      Vista derivada (useProjectView)
+│  ├─ fixtures/       Proyecto de ejemplo (seed)
+│  ├─ ui/             Interfaz
+│  │  ├─ Dashboard.tsx     Tablero
+│  │  ├─ components/       Paneles y primitivas
+│  │  ├─ forms/            Alta/edición de proyecto, paquetes y cortes
+│  │  ├─ conclusion.ts     Redacción de la conclusión de la pantalla
+│  │  ├─ export.ts         Export a CSV
+│  │  └─ format.ts         Formateadores (moneda, índices, meses)
+│  └─ test/setup.ts
 ├─ tailwind.config.ts  Tokens de paleta y tipografías
 └─ vite.config.ts      Vite + Vitest
 ```
 
-## Motor EVM (`src/core/evm.ts`)
+Principio rector: **el `core/` es la única fuente de verdad de los números.** La
+UI nunca recalcula un indicador; sólo muestra lo que devuelve el motor.
 
-Funciones puras que calculan, a una fecha de corte:
+---
 
-| Indicador | Fórmula | Nota |
-|-----------|---------|------|
-| SV | EV − PV | variación de plazo |
-| CV | EV − AC | variación de costo |
-| SPI | EV / PV | `null` si PV = 0 |
-| CPI | EV / AC | `null` si AC = 0 |
-| EAC (`cpi`) | BAC / CPI | desvío sistémico |
-| EAC (`budgetRate`) | AC + (BAC − EV) | desvío puntual |
-| EAC (`cpiSpi`) | AC + (BAC − EV) / (CPI × SPI) | costo + plazo |
-| ETC | EAC − AC | por variante |
-| VAC | BAC − EAC | por variante |
-| TCPI (BAC) | (BAC − EV) / (BAC − AC) | `null` si BAC = AC |
-| TCPI (EAC) | (BAC − EV) / (EAC − AC) | `null` si EAC = null o EAC = AC |
+## 🛠️ Stack
 
-**División por cero:** los indicadores indefinidos devuelven `null` (nunca
-`Infinity` ni `NaN`). `null` significa "sin información suficiente todavía".
+React + Vite + TypeScript · Zustand · Tailwind · Dexie (IndexedDB) · Vitest.
+Tipografías self-hosted (Inter · IBM Plex Mono), sin CDN.
 
-Las tres curvas (PV, EV, AC) se derivan del modelo de datos con
-`plannedValue`, `earnedValue` y `actualCost`; `computeEvm()` agrega todo. El
-time-phasing del PV usa una **curva S** (smoothstep de Hermite, `3t²−2t³`) por
-defecto — arranque lento, aceleración y desaceleración —, intercambiable por
-`linearCurve` u otra `ProgressCurve`.
+---
 
-## Maqueta del tablero (`src/ui`)
-
-Un tablero de ejemplo (proyecto de gasoducto) que materializa las reglas de
-diseño:
-
-- Cada pantalla **abre con una conclusión escrita**, no con gráficos.
-- **Ningún número absoluto sin su comparación** contra plan (SPI/CPI vs 1.00,
-  avance vs plan, EAC vs BAC, etc.).
-- **Sin donuts ni gauges**: sólo texto, tablas y una curva S de líneas.
-- El panel **"Requiere decisión"** va arriba, ordenado por **exposición**
-  económica, con el **motivo explícito** de cada ítem.
-- Tema claro, sobrio y de alta densidad (aire de planilla de control):
-  Inter para interfaz e IBM Plex Mono para cifras (self-hosted); acentos con
-  semántica fija (ámbar = atención, rojo = desvío, verde = dentro de plan).
-
-Correr `npm run dev` y abrir el tablero.
-
-## Comandos
+## 🚀 Puesta en marcha
 
 ```bash
 npm install
-npm test         # corre la suite de Vitest
-npm run dev      # servidor de desarrollo
-npm run build    # build de producción
-npm run typecheck
+npm run dev        # servidor de desarrollo
+npm test           # corre la suite de Vitest
+npm run typecheck  # chequeo de tipos
+npm run build      # build de producción
+```
+
+La primera vez, si la base está vacía, se siembra un proyecto de ejemplo (un
+tramo de gasoducto con planta compresora) para poder explorar el tablero.
+
+---
+
+## 🗺️ Roadmap
+
+En orden de valor para el perfil PMO / control de proyectos:
+
+- [x] Motor EVM puro y testeado
+- [x] Tablero con conclusión escrita, panel de decisión y curva S
+- [x] Persistencia local (Dexie) + estado (Zustand)
+- [x] Earned Schedule (pronóstico de fecha de fin)
+- [x] Export a CSV
+- [ ] **Línea base congelada** + registro de rebaselining (auditable)
+- [ ] **Reporte PDF** para comité de dirección
+- [ ] Import de cronograma (MS Project / P6 / CSV) para el time-phasing real
+- [ ] Backend multiusuario con trazabilidad (quién cargó qué corte)
+- [ ] WBS jerárquica (proyecto → subproyecto → paquete → cuenta de control)
+- [ ] Notificación a Slack cuando un paquete cruza a "desvío"
+
+---
+
+## ✅ Estado de tests
+
+El motor de cálculo (EVM + Earned Schedule) está cubierto por tests de Vitest,
+incluyendo casos borde: avance cero, costo cero, división por cero y proyecto
+terminado.
+
+```bash
+npm test
 ```

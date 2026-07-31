@@ -7,6 +7,7 @@ import {
   vigenteByWp,
   type CurvePoint,
 } from '../analytics/resolve';
+import { scheduleForecast, type ScheduleForecast } from '../analytics/schedule';
 import type { Project } from '../core/types';
 import { usePmStore } from './pmStore';
 
@@ -14,6 +15,8 @@ export interface ProjectView {
   project: Project;
   analysis: ProjectAnalysis;
   history: CurvePoint[];
+  /** Pronóstico de plazo por Earned Schedule. */
+  forecast: ScheduleForecast;
   /** Todas las fechas de corte disponibles del proyecto (para el selector). */
   availableCuts: string[];
   dataDate: string;
@@ -42,10 +45,13 @@ export function useProjectView(): ProjectView | null {
     const dates = cutDatesUpTo(progressEntries, dataDate);
     const history = evmHistory(workPackages, progressEntries, dates.length ? dates : [dataDate]);
 
+    const forecast = scheduleForecast(project, workPackages, analysis.evm.ev, dataDate);
+
     return {
       project,
       analysis,
       history,
+      forecast,
       availableCuts: allCutDates(progressEntries),
       dataDate,
     };

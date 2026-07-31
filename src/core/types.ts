@@ -1,5 +1,5 @@
 /**
- * Modelo de datos de PMTool y tipos del motor EVM.
+ * Modelo de datos de PMI Toolbox y tipos del motor EVM.
  *
  * Convención de este módulo:
  *  - Los importes están en la moneda del proyecto (no se mezclan monedas acá).

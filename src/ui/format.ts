@@ -32,3 +32,15 @@ export function indexDelta(value: number | null): string {
 export function pct(fraction: number): string {
   return `${Math.round(fraction * 100)}%`;
 }
+
+/** Cantidad de meses a 1 decimal (ej.: "18,5 m"). `null` ⇒ "—". */
+export function months(value: number | null): string {
+  return value === null ? '—' : `${value.toFixed(1)} m`;
+}
+
+/** Meses con signo explícito (ej.: "+2,4 m"). `null` ⇒ "—". */
+export function signedMonths(value: number | null): string {
+  if (value === null) return '—';
+  const s = `${Math.abs(value).toFixed(1)} m`;
+  return value < 0 ? `−${s}` : value > 0 ? `+${s}` : s;
+}

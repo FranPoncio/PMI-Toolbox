@@ -5,6 +5,7 @@ import { buildConclusion } from './conclusion';
 import { DecisionPanel } from './components/DecisionPanel';
 import { EvmSummary } from './components/EvmSummary';
 import { SCurveChart } from './components/SCurveChart';
+import { SchedulePanel } from './components/SchedulePanel';
 import { WorkPackageTable } from './components/WorkPackageTable';
 import { StatusPill } from './components/primitives';
 import { Button, Select } from './components/fields';
@@ -12,6 +13,7 @@ import { Modal } from './components/Modal';
 import { DataModal } from './forms/DataModal';
 import { ProgressForm } from './forms/ProgressForm';
 import { ProjectForm } from './forms/ProjectForm';
+import { buildCsv, downloadCsv } from './export';
 
 const TIPO_LABEL: Record<string, string> = {
   obra_civil: 'Obra civil',
@@ -48,7 +50,7 @@ export function Dashboard() {
       {/* Toolbar: proyecto, corte y acciones. */}
       <div className="mb-5 flex flex-wrap items-center gap-3 border-b border-line pb-4">
         <div className="text-[11px] font-600 uppercase tracking-[0.16em] text-tech">
-          PMTool · Tablero EVM
+          PMI Toolbox · Tablero EVM
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {projects.length > 0 && (
@@ -75,6 +77,18 @@ export function Dashboard() {
           )}
           {view && <Button onClick={() => setDialog('progress')}>＋ Corte</Button>}
           {view && <Button onClick={() => setDialog('data')}>Datos</Button>}
+          {view && (
+            <Button
+              onClick={() =>
+                downloadCsv(
+                  `pmi-toolbox_${view.project.nombre.replace(/\s+/g, '-')}_${view.dataDate}.csv`,
+                  buildCsv(view)
+                )
+              }
+            >
+              Exportar
+            </Button>
+          )}
           <Button variant="primary" onClick={() => setDialog('newProject')}>
             Nuevo proyecto
           </Button>
@@ -116,7 +130,7 @@ function ProjectDashboard({
   view: NonNullable<ReturnType<typeof useProjectView>>;
   onLoadCut: () => void;
 }) {
-  const { project, analysis, history, dataDate } = view;
+  const { project, analysis, history, forecast, dataDate } = view;
   const workPackages = usePmStore((s) => s.workPackages);
   const conclusion = buildConclusion(analysis);
   const cur = project.moneda;
@@ -162,6 +176,7 @@ function ProjectDashboard({
         <div className="mt-6 space-y-5">
           <DecisionPanel items={analysis.decisiones} currency={cur} />
           <EvmSummary evm={analysis.evm} currency={cur} />
+          <SchedulePanel forecast={forecast} />
           <SCurveChart
             project={project}
             workPackages={workPackages}
