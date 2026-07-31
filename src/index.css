@@ -59,7 +59,37 @@ body {
   .avoid-break {
     break-inside: avoid;
   }
+
+  /* El documento ocupa el ancho de la página (sin el max-width de pantalla). */
+  .report-overlay .report-doc {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  /* Las tablas del tablero traen min-width para scroll horizontal en pantalla;
+     en papel deben plegarse al ancho disponible, no desbordar. */
+  .report-overlay .overflow-x-auto {
+    overflow: visible !important;
+  }
+  .report-overlay table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed;
+  }
+  .report-overlay td,
+  .report-overlay th {
+    overflow-wrap: anywhere;
+  }
+  /* Un punto menos de cuerpo para densidad de informe. */
+  .report-overlay {
+    font-size: 95%;
+  }
+  /* Sombras no aportan en papel. */
+  .report-overlay section {
+    box-shadow: none !important;
+  }
+
   @page {
     margin: 14mm;
+    size: A4;
   }
 }

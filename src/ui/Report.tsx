@@ -34,7 +34,7 @@ export function Report({ view, onClose }: { view: ProjectView; onClose: () => vo
         </Button>
       </div>
 
-      <div className="mx-auto max-w-4xl px-8 py-8">
+      <div className="report-doc mx-auto max-w-4xl px-8 py-8">
         {/* Encabezado del documento. */}
         <div className="mb-6 border-b border-line pb-4">
           <div className="text-[11px] font-600 uppercase tracking-[0.16em] text-tech">
