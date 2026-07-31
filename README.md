@@ -10,6 +10,9 @@ infraestructura y del reporte a organismos multilaterales de crédito.
 > cálculo testeado, tablero, persistencia local, pronóstico de plazo (Earned
 > Schedule) y export a CSV. Ver [Roadmap](#-roadmap).
 
+> 📖 **¿Cómo se usa?** Ver la **[Guía de uso](docs/GUIA-DE-USO.md)** — el manual
+> práctico paso a paso (crear proyecto → WBS → línea base → cortes → reporte).
+
 ---
 
 ## ✨ Qué hace
