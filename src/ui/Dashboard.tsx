@@ -35,19 +35,22 @@ const TOUR_STEPS: TourStep[] = [
     body: 'Mirá el proyecto a cualquier fecha de corte cargada. El tablero se recalcula a esa fecha.',
   },
   {
-    selector: '[data-tour="btn-datos"]',
+    dialog: 'data',
+    selector: '[data-tour="dialog"]',
     title: '1 · Datos (la WBS)',
-    body: 'Acá cargás y editás los paquetes de trabajo y su jerarquía. También importás un cronograma por CSV.',
+    body: 'Este es el editor de la estructura de trabajo: cargás y anidás los paquetes, o importás un cronograma por CSV. Las hojas llevan el dato; los resúmenes se calculan solos.',
   },
   {
-    selector: '[data-tour="btn-baseline"]',
+    dialog: 'baseline',
+    selector: '[data-tour="dialog"]',
     title: '2 · Línea base',
-    body: 'Congelás el plan aprobado. A partir de ahí, todo se mide contra esa foto.',
+    body: 'Acá congelás el plan aprobado (una versión). A partir de ahí, todo se mide contra esa foto; si cambia el alcance, congelás una v2.',
   },
   {
-    selector: '[data-tour="btn-corte"]',
+    dialog: 'progress',
+    selector: '[data-tour="dialog"]',
     title: '3 · Cargar corte',
-    body: 'En cada fecha cargás el % de avance físico y el costo real acumulado de cada paquete.',
+    body: 'En cada fecha completás, por paquete, el % de avance físico y el costo real acumulado. También podés importarlo por CSV.',
   },
   {
     selector: '[data-tour="conclusion"]',
@@ -295,7 +298,16 @@ export function Dashboard() {
           }}
         />
       )}
-      {tour && <Tour steps={TOUR_STEPS} onFinish={() => setTour(false)} />}
+      {tour && (
+        <Tour
+          steps={TOUR_STEPS}
+          onStepChange={(step) => setDialog((step.dialog as Dialog) ?? null)}
+          onFinish={() => {
+            setTour(false);
+            setDialog(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -6,6 +6,8 @@ export interface TourStep {
   selector?: string;
   title: string;
   body: string;
+  /** Diálogo/menú que este paso abre (lo interpreta el contenedor). */
+  dialog?: string;
 }
 
 const PAD = 6;
@@ -14,8 +16,19 @@ const TIP_W = 340;
 /**
  * Recorrido guiado con "spotlight": oscurece la pantalla y resalta cada
  * elemento en secuencia, con un globo de ayuda. Sin dependencias.
+ *
+ * `onStepChange` avisa qué paso está activo para que el contenedor pueda abrir
+ * el menú correspondiente (así el foco cae sobre el modal recién abierto).
  */
-export function Tour({ steps, onFinish }: { steps: TourStep[]; onFinish: () => void }) {
+export function Tour({
+  steps,
+  onFinish,
+  onStepChange,
+}: {
+  steps: TourStep[];
+  onFinish: () => void;
+  onStepChange?: (step: TourStep) => void;
+}) {
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const tipRef = useRef<HTMLDivElement>(null);
@@ -24,26 +37,36 @@ export function Tour({ steps, onFinish }: { steps: TourStep[]; onFinish: () => v
   const step = steps[i]!;
   const last = i === steps.length - 1;
 
-  // Ubica y mide el elemento resaltado del paso actual.
+  // Avisa el cambio de paso (para abrir/cerrar el menú del paso).
+  useEffect(() => {
+    onStepChange?.(steps[i]!);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i]);
+
+  // Ubica y mide el elemento del paso. Reintenta unas veces porque el objetivo
+  // puede montar tarde (p. ej. un modal que se acaba de abrir).
   useLayoutEffect(() => {
-    const sel = step.selector;
+    const sel = steps[i]!.selector;
     const find = () => (sel ? (document.querySelector(sel) as HTMLElement | null) : null);
-    const el = find();
-    el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    let scrolled = false;
     const measure = () => {
       const e = find();
+      if (e && !scrolled) {
+        e.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        scrolled = true;
+      }
       setRect(e ? e.getBoundingClientRect() : null);
     };
     measure();
-    const t = window.setTimeout(measure, 280); // tras el scroll suave
+    const timers = [60, 180, 320, 500].map((d) => window.setTimeout(measure, d));
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
     return () => {
-      window.clearTimeout(t);
+      timers.forEach((t) => window.clearTimeout(t));
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };
-  }, [step.selector]);
+  }, [i, steps]);
 
   // Posiciona el globo respecto del elemento (o centrado si no hay).
   useLayoutEffect(() => {

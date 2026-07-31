@@ -25,6 +25,7 @@ export function Modal({
       onMouseDown={onClose}
     >
       <div
+        data-tour="dialog"
         className={`w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} rounded-md border border-line bg-panel shadow-xl`}
         onMouseDown={(e) => e.stopPropagation()}
       >
