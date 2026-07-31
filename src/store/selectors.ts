@@ -16,6 +16,7 @@ import {
   type EffectiveItem,
 } from '../analytics/resolve';
 import { scheduleForecast, type ScheduleForecast } from '../analytics/schedule';
+import { leaves } from '../analytics/wbs';
 import type { Baseline, PlannedItem, Project } from '../core/types';
 import { usePmStore } from './pmStore';
 
@@ -59,12 +60,13 @@ export function useProjectView(): ProjectView | null {
     const vigentes = vigenteByWp(progressEntries, dataDate);
     const analysis = analyzeProject(project, workPackages, vigentes, dataDate, baseline);
 
-    // Ítems efectivos (línea base si hay foto del paquete, o vivo si no).
-    const effectiveItems: EffectiveItem[] = workPackages.map((wp) => ({
+    // Ítems efectivos: solo las hojas (donde vive el plan), con línea base si hay.
+    const hojas = leaves(workPackages);
+    const effectiveItems: EffectiveItem[] = hojas.map((wp) => ({
       id: wp.id,
       ...effectivePlanItem(wp, baseline),
     }));
-    const bac = effectiveBac(workPackages, baseline);
+    const bac = effectiveBac(hojas, baseline);
 
     // Historia para la curva: fechas de corte hasta la fecha elegida.
     const dates = cutDatesUpTo(progressEntries, dataDate);

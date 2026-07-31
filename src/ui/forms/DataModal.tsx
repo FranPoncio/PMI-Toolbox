@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Project, WorkPackage } from '../../core/types';
+import { childrenOf, isLeaf, leaves, roots } from '../../analytics/wbs';
 import { usePmStore } from '../../store/pmStore';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/fields';
@@ -7,6 +8,17 @@ import { money } from '../format';
 import { ImportModal } from './ImportModal';
 import { ProjectForm } from './ProjectForm';
 import { WorkPackageForm } from './WorkPackageForm';
+
+/** Aplana la WBS en orden (padre antes que hijos) con su profundidad. */
+function ordenarWbs(all: WorkPackage[]): Array<{ wp: WorkPackage; depth: number }> {
+  const out: Array<{ wp: WorkPackage; depth: number }> = [];
+  const visit = (wp: WorkPackage, depth: number) => {
+    out.push({ wp, depth });
+    for (const c of childrenOf(wp.id, all)) visit(c, depth + 1);
+  };
+  for (const r of roots(all)) visit(r, 0);
+  return out;
+}
 
 type View =
   | { kind: 'list' }
@@ -27,7 +39,9 @@ export function DataModal({
   const removeWorkPackage = usePmStore((s) => s.removeWorkPackage);
   const [view, setView] = useState<View>({ kind: 'list' });
 
-  const totalWp = workPackages.reduce((a, w) => a + w.presupuesto, 0);
+  // El BAC vive en las hojas; los nodos de resumen no suman (evita doble conteo).
+  const totalWp = leaves(workPackages).reduce((a, w) => a + w.presupuesto, 0);
+  const filas = ordenarWbs(workPackages);
 
   if (view.kind === 'project') {
     return (
@@ -39,7 +53,12 @@ export function DataModal({
   if (view.kind === 'wp') {
     return (
       <Modal title={view.wp ? 'Editar paquete' : 'Nuevo paquete'} onClose={() => setView({ kind: 'list' })}>
-        <WorkPackageForm projectId={project.id} wp={view.wp} onDone={() => setView({ kind: 'list' })} />
+        <WorkPackageForm
+          projectId={project.id}
+          workPackages={workPackages}
+          wp={view.wp}
+          onDone={() => setView({ kind: 'list' })}
+        />
       </Modal>
     );
   }
@@ -80,33 +99,46 @@ export function DataModal({
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60">
-              {workPackages.map((wp) => (
-                <tr key={wp.id}>
-                  <td className="py-2 pr-4">
-                    <div className="font-500 text-ink">{wp.nombre}</div>
-                    <div className="text-[12px] text-tech/80">{wp.responsable || '—'}</div>
-                  </td>
-                  <td className="num py-2 pr-4 text-right text-ink">
-                    {money(wp.presupuesto, project.moneda)}
-                  </td>
-                  <td className="num py-2 pr-4 text-[12px] text-tech">
-                    {wp.fechaInicioPlan} → {wp.fechaFinPlan}
-                  </td>
-                  <td className="py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button onClick={() => setView({ kind: 'wp', wp })}>Editar</Button>
-                      <Button
-                        variant="danger"
-                        onClick={async () => {
-                          if (confirm(`¿Borrar «${wp.nombre}» y sus cortes?`)) await removeWorkPackage(wp.id);
-                        }}
-                      >
-                        Borrar
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filas.map(({ wp, depth }) => {
+                const resumen = !isLeaf(wp, workPackages);
+                return (
+                  <tr key={wp.id} className={resumen ? 'bg-bg/40' : ''}>
+                    <td className="py-2 pr-4">
+                      <div style={{ paddingLeft: `${depth * 16}px` }}>
+                        <div className={resumen ? 'font-700 text-ink' : 'font-500 text-ink'}>
+                          {resumen && <span className="mr-1 text-tech/60">▾</span>}
+                          {wp.nombre}
+                        </div>
+                        {!resumen && (
+                          <div className="text-[12px] text-tech/80">{wp.responsable || '—'}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="num py-2 pr-4 text-right text-ink">
+                      {resumen ? <span className="text-tech/60">roll-up</span> : money(wp.presupuesto, project.moneda)}
+                    </td>
+                    <td className="num py-2 pr-4 text-[12px] text-tech">
+                      {resumen ? '—' : `${wp.fechaInicioPlan} → ${wp.fechaFinPlan}`}
+                    </td>
+                    <td className="py-2 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button onClick={() => setView({ kind: 'wp', wp })}>Editar</Button>
+                        <Button
+                          variant="danger"
+                          onClick={async () => {
+                            const msg = resumen
+                              ? `¿Borrar «${wp.nombre}» y todos sus sub-paquetes y cortes?`
+                              : `¿Borrar «${wp.nombre}» y sus cortes?`;
+                            if (confirm(msg)) await removeWorkPackage(wp.id);
+                          }}
+                        >
+                          Borrar
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

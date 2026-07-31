@@ -8,6 +8,7 @@
  */
 
 import type { Baseline, BaselineItem, PlannedItem, Project, WorkPackage } from '../core/types';
+import { leaves } from './wbs';
 
 /** La línea base vigente, o `undefined` si el proyecto no tiene ninguna. */
 export function activeBaseline(baselines: readonly Baseline[]): Baseline | undefined {
@@ -51,7 +52,11 @@ export function effectiveBac(
   return workPackages.reduce((acc, wp) => acc + wp.presupuesto, 0);
 }
 
-/** Construye la foto de una nueva línea base a partir del estado vivo (sin id). */
+/**
+ * Construye la foto de una nueva línea base a partir del estado vivo (sin id).
+ * Congela solo las **hojas** (donde vive el dato); los nodos de resumen se
+ * derivan por roll-up, así que no se guardan.
+ */
 export function buildBaselineSnapshot(
   project: Project,
   workPackages: readonly WorkPackage[],
@@ -59,7 +64,7 @@ export function buildBaselineSnapshot(
   fechaAprobacion: string,
   motivo: string
 ): Omit<Baseline, 'id'> {
-  const items: BaselineItem[] = workPackages.map((wp) => ({
+  const items: BaselineItem[] = leaves(workPackages).map((wp) => ({
     workPackageId: wp.id,
     nombre: wp.nombre,
     presupuesto: wp.presupuesto,
@@ -97,12 +102,14 @@ export function diffBaseline(
   const empty: BaselineDivergence = { cambio: false, agregados: [], quitados: [], modificados: [] };
   if (!baseline) return empty;
 
+  // La base congela hojas; se compara contra las hojas vivas.
+  const hojas = leaves(workPackages);
   const byId = new Map(baseline.items.map((i) => [i.workPackageId, i]));
-  const vivosIds = new Set(workPackages.map((w) => w.id));
+  const vivosIds = new Set(hojas.map((w) => w.id));
 
   const agregados: string[] = [];
   const modificados: string[] = [];
-  for (const wp of workPackages) {
+  for (const wp of hojas) {
     const item = byId.get(wp.id);
     if (!item) {
       agregados.push(wp.nombre);

@@ -35,6 +35,12 @@ export interface Project {
 export interface WorkPackage {
   id: string;
   projectId: string;
+  /**
+   * Id del paquete padre en la WBS, o `null`/ausente si cuelga de la raíz.
+   * Los nodos con hijos son "resumen" (roll-up): su presupuesto, fechas y
+   * avance se derivan de sus hojas y no se cargan directamente.
+   */
+  parentId?: string | null;
   nombre: string;
   /** Presupuesto del paquete (parte del BAC del proyecto). */
   presupuesto: number;

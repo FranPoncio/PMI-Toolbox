@@ -22,10 +22,22 @@ export const project: Project = {
   moneda: 'USD',
 };
 
+// WBS de dos niveles: tres fases de resumen (roll-up) con sus paquetes hoja.
+const RESUMEN = {
+  presupuesto: 0,
+  peso: 0,
+  fechaInicioPlan: '2025-09-01',
+  fechaFinPlan: '2027-03-31',
+  responsable: '',
+} as const;
+
 export const workPackages: WorkPackage[] = [
+  // ── Fase 1: Ingeniería y adquisiciones ──
+  { id: 'g1', projectId: 'gc3', parentId: null, nombre: 'Ingeniería y adquisiciones', ...RESUMEN },
   {
     id: 'wp-ing',
     projectId: 'gc3',
+    parentId: 'g1',
     nombre: 'Ingeniería de detalle',
     presupuesto: 850_000,
     peso: 3.7,
@@ -36,6 +48,7 @@ export const workPackages: WorkPackage[] = [
   {
     id: 'wp-adq',
     projectId: 'gc3',
+    parentId: 'g1',
     nombre: 'Adquisición de cañería y válvulas',
     presupuesto: 4_200_000,
     peso: 18.1,
@@ -43,9 +56,12 @@ export const workPackages: WorkPackage[] = [
     fechaFinPlan: '2026-09-30',
     responsable: 'S. Duarte',
   },
+  // ── Fase 2: Construcción y montaje ──
+  { id: 'g2', projectId: 'gc3', parentId: null, nombre: 'Construcción y montaje', ...RESUMEN },
   {
     id: 'wp-civ',
     projectId: 'gc3',
+    parentId: 'g2',
     nombre: 'Obras civiles planta compresora',
     presupuesto: 3_100_000,
     peso: 13.4,
@@ -56,6 +72,7 @@ export const workPackages: WorkPackage[] = [
   {
     id: 'wp-duc',
     projectId: 'gc3',
+    parentId: 'g2',
     nombre: 'Tendido y soldadura de ducto',
     presupuesto: 6_800_000,
     peso: 29.3,
@@ -66,6 +83,7 @@ export const workPackages: WorkPackage[] = [
   {
     id: 'wp-mon',
     projectId: 'gc3',
+    parentId: 'g2',
     nombre: 'Montaje electromecánico',
     presupuesto: 5_400_000,
     peso: 23.3,
@@ -73,9 +91,12 @@ export const workPackages: WorkPackage[] = [
     fechaFinPlan: '2027-01-31',
     responsable: 'L. Ferreyra',
   },
+  // ── Fase 3: Puesta en marcha ──
+  { id: 'g3', projectId: 'gc3', parentId: null, nombre: 'Puesta en marcha', ...RESUMEN },
   {
     id: 'wp-scada',
     projectId: 'gc3',
+    parentId: 'g3',
     nombre: 'Instrumentación y SCADA',
     presupuesto: 1_650_000,
     peso: 7.1,
@@ -86,6 +107,7 @@ export const workPackages: WorkPackage[] = [
   {
     id: 'wp-pru',
     projectId: 'gc3',
+    parentId: 'g3',
     nombre: 'Pruebas, precomisionado y habilitación',
     presupuesto: 1_200_000,
     peso: 5.2,

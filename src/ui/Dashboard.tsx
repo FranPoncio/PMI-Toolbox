@@ -214,7 +214,7 @@ function ProjectDashboard({
             dataDate={dataDate}
             history={history}
           />
-          <WorkPackageTable packages={analysis.packages} currency={cur} />
+          <WorkPackageTable tree={analysis.tree} currency={cur} />
         </div>
       )}
 

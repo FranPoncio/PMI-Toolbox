@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Baseline, ProgressEntry, Project, WorkPackage } from '../core/types';
 import { buildBaselineSnapshot } from '../analytics/baseline';
 import { allCutDates } from '../analytics/resolve';
+import { subtreeIds } from '../analytics/wbs';
 import { newId } from '../db/db';
 import { seedIfEmpty } from '../db/seed';
 import * as repo from '../db/repository';
@@ -133,7 +134,9 @@ export const usePmStore = create<PmState>((set, get) => {
     },
 
     async removeWorkPackage(id) {
-      await repo.deleteWorkPackage(id);
+      // Borrado en cascada: el paquete y todo su subárbol (y sus cortes).
+      const ids = subtreeIds(id, get().workPackages);
+      for (const wid of ids) await repo.deleteWorkPackage(wid);
       const pid = get().selectedProjectId;
       if (pid) await loadProjectData(pid, true);
     },

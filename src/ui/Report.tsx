@@ -78,7 +78,7 @@ export function Report({ view, onClose }: { view: ProjectView; onClose: () => vo
             />
           </div>
           <div className="avoid-break">
-            <WorkPackageTable packages={analysis.packages} currency={project.moneda} />
+            <WorkPackageTable tree={analysis.tree} currency={project.moneda} />
           </div>
 
           {(project.riesgos || project.proximosPasos) && (

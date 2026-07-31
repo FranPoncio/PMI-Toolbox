@@ -106,6 +106,14 @@ Un **rebaseline** crea una versión nueva y conserva las anteriores. Si la
 estructura viva difiere de la base activa, se detecta la **divergencia**
 (agregados / quitados / modificados) y se avisa en pantalla.
 
+### WBS jerárquica (`src/analytics/wbs.ts`)
+
+La estructura de trabajo es un árbol (patrón Primavera P6 / MS Project): **solo
+las hojas cargan dato** (presupuesto, fechas, avance, costo); los nodos de
+resumen muestran el **roll-up** de sus hojas y nunca se tipean, así no hay doble
+conteo. El consolidado, la línea base y las decisiones se calculan sobre las
+hojas; la tabla de detalle muestra el árbol indentado con los resúmenes.
+
 ### Panel de decisión y exposición
 
 Cada paquete se clasifica (dentro de plan / atención / desvío) por su peor
@@ -207,8 +215,8 @@ En orden de valor para el perfil PMO / control de proyectos:
 - [x] **Import de avances y costos reales** (patrón ERP → EVM) por CSV
 - [x] Reporte con **Riesgos & Issues + Próximos pasos** (estándar ISR / PMR)
 - [x] EAC/pronóstico como **rango** entre métodos (forecasting por banda)
+- [x] **WBS jerárquica** (nodos de resumen con roll-up de sus hojas)
 - [ ] Backend multiusuario con trazabilidad (quién cargó qué corte)
-- [ ] WBS jerárquica (proyecto → subproyecto → paquete → cuenta de control)
 - [ ] Notificación a Slack cuando un paquete cruza a "desvío"
 
 ---

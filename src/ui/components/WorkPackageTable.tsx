@@ -1,4 +1,4 @@
-import type { WorkPackageAnalysis } from '../../analytics/decisions';
+import type { WbsNode } from '../../analytics/decisions';
 import { STATUS_STYLE } from '../statusColor';
 import { index, indexDelta, money, pct } from '../format';
 import { Panel, SectionHead, StatusPill } from './primitives';
@@ -14,7 +14,6 @@ function ProgressVsPlan({ real, plan }: { real: number; plan: number }) {
         className="absolute inset-y-0 left-0 rounded-full"
         style={{ width: `${r * 100}%`, backgroundColor: behind ? '#BC4327' : '#27795A' }}
       />
-      {/* Marca de plan. */}
       <div
         className="absolute inset-y-[-2px] w-[2px] bg-ink"
         style={{ left: `calc(${p * 100}% - 1px)` }}
@@ -26,13 +25,7 @@ function ProgressVsPlan({ real, plan }: { real: number; plan: number }) {
 
 function IndexCell({ value }: { value: number | null }) {
   const status =
-    value === null
-      ? 'sin-dato'
-      : value >= 0.98
-        ? 'onplan'
-        : value >= 0.9
-          ? 'atencion'
-          : 'desvio';
+    value === null ? 'sin-dato' : value >= 0.98 ? 'onplan' : value >= 0.9 ? 'atencion' : 'desvio';
   const s = STATUS_STYLE[status];
   return (
     <span className="num inline-flex flex-col items-end leading-tight">
@@ -42,23 +35,92 @@ function IndexCell({ value }: { value: number | null }) {
   );
 }
 
+/** Aplana el árbol en orden de WBS (padre antes que hijos), contando nodos. */
+function flatten(nodes: WbsNode[]): WbsNode[] {
+  const out: WbsNode[] = [];
+  const visit = (n: WbsNode) => {
+    out.push(n);
+    n.children.forEach(visit);
+  };
+  nodes.forEach(visit);
+  return out;
+}
+
+function Row({ node, currency }: { node: WbsNode; currency: string }) {
+  const { inputs, evm, isLeaf } = node;
+  const real = inputs.bac > 0 ? inputs.ev / inputs.bac : 0;
+  const plan = inputs.bac > 0 ? inputs.pv / inputs.bac : 0;
+  const vac = evm.vac.cpi;
+  const nombreCls = isLeaf ? 'font-500 text-ink' : 'font-700 text-ink';
+
+  return (
+    <tr className={`align-middle ${isLeaf ? '' : 'bg-bg/40'}`}>
+      <td className="px-5 py-2.5">
+        <div style={{ paddingLeft: `${node.depth * 16}px` }}>
+          <div className="flex items-center gap-1.5">
+            {!isLeaf && <span className="text-tech/60" aria-hidden>▾</span>}
+            <span className={nombreCls}>{node.wp.nombre}</span>
+          </div>
+          {isLeaf && node.wp.responsable && (
+            <div className="text-[12px] text-tech/80" style={{ marginLeft: '0px' }}>
+              {node.wp.responsable}
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="py-2.5 pr-4">
+        <div className="flex items-center gap-2">
+          <ProgressVsPlan real={real} plan={plan} />
+          <span className="num text-[12px] text-tech">
+            {pct(real)} <span className="text-tech/60">/ {pct(plan)}</span>
+          </span>
+        </div>
+      </td>
+      <td className="py-2.5 pr-4 text-right">
+        <IndexCell value={evm.spi} />
+      </td>
+      <td className="py-2.5 pr-4 text-right">
+        <IndexCell value={evm.cpi} />
+      </td>
+      <td className="num py-2.5 pr-4 text-right">
+        {evm.eac.cpi === null ? (
+          <span className="text-tech/60">—</span>
+        ) : (
+          <span className="inline-flex flex-col items-end leading-tight">
+            <span className="text-ink">{money(evm.eac.cpi, currency)}</span>
+            <span
+              className="text-[11px]"
+              style={{ color: vac !== null && vac < 0 ? '#BC4327' : '#58696F' }}
+            >
+              {vac === null ? '' : vac < 0 ? `+${money(-vac, currency)}` : 'en presupuesto'}
+            </span>
+          </span>
+        )}
+      </td>
+      <td className="py-2.5 pr-5 text-right">
+        <StatusPill status={node.status} />
+      </td>
+    </tr>
+  );
+}
+
 /**
- * Tabla de paquetes de trabajo. Ningún valor va solo: el avance se muestra
- * contra el plan, y SPI/CPI contra 1.00. Se ordena por exposición para que lo
- * más comprometido quede arriba.
+ * Tabla de la WBS. Muestra la jerarquía indentada: los nodos de resumen (en
+ * negrita, con fondo tenue) traen el roll-up de sus hojas; las hojas, su dato
+ * propio. Ningún valor va solo — el avance se muestra contra el plan y SPI/CPI
+ * contra 1.00.
  */
-export function WorkPackageTable({
-  packages,
-  currency,
-}: {
-  packages: WorkPackageAnalysis[];
-  currency: string;
-}) {
-  const rows = [...packages].sort((a, b) => b.exposicion - a.exposicion);
+export function WorkPackageTable({ tree, currency }: { tree: WbsNode[]; currency: string }) {
+  const rows = flatten(tree);
+  const hojas = rows.filter((n) => n.isLeaf).length;
 
   return (
     <Panel>
-      <SectionHead eyebrow="Detalle" title="Paquetes de trabajo" aside={`${rows.length} paquetes`} />
+      <SectionHead
+        eyebrow="Detalle"
+        title="Estructura de trabajo (WBS)"
+        aside={`${hojas} paquete(s) · ${rows.length - hojas} resumen`}
+      />
       <div className="overflow-x-auto">
         <table className="w-full min-w-[820px] text-[13px]">
           <thead>
@@ -72,51 +134,9 @@ export function WorkPackageTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-line/60">
-            {rows.map((a) => {
-              const real = a.inputs.ev / a.inputs.bac;
-              const plan = a.inputs.pv / a.inputs.bac;
-              const vac = a.evm.vac.cpi;
-              return (
-                <tr key={a.wp.id} className="align-middle">
-                  <td className="px-5 py-3">
-                    <div className="font-500 text-ink">{a.wp.nombre}</div>
-                    <div className="text-[12px] text-tech/80">{a.wp.responsable}</div>
-                  </td>
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-2">
-                      <ProgressVsPlan real={real} plan={plan} />
-                      <span className="num text-[12px] text-tech">
-                        {pct(real)} <span className="text-tech/60">/ {pct(plan)}</span>
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4 text-right">
-                    <IndexCell value={a.evm.spi} />
-                  </td>
-                  <td className="py-3 pr-4 text-right">
-                    <IndexCell value={a.evm.cpi} />
-                  </td>
-                  <td className="num py-3 pr-4 text-right">
-                    {a.evm.eac.cpi === null ? (
-                      <span className="text-tech/60">—</span>
-                    ) : (
-                      <span className="inline-flex flex-col items-end leading-tight">
-                        <span className="text-ink">{money(a.evm.eac.cpi, currency)}</span>
-                        <span
-                          className="text-[11px]"
-                          style={{ color: vac !== null && vac < 0 ? '#BC4327' : '#58696F' }}
-                        >
-                          {vac === null ? '' : vac < 0 ? `+${money(-vac, currency)}` : 'en presupuesto'}
-                        </span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-5 text-right">
-                    <StatusPill status={a.status} />
-                  </td>
-                </tr>
-              );
-            })}
+            {rows.map((node) => (
+              <Row key={node.wp.id} node={node} currency={currency} />
+            ))}
           </tbody>
         </table>
       </div>

@@ -19,6 +19,7 @@ import type {
 } from '../core/types';
 import { effectiveBac, effectivePlanItem } from './baseline';
 import { classifyIndex, worstStatus, type Status } from './status';
+import { childrenOf, leaves, roots } from './wbs';
 
 export interface WorkPackageAnalysis {
   wp: WorkPackage;
@@ -48,12 +49,30 @@ export interface DecisionItem {
   motivo: string;
 }
 
-export interface ProjectAnalysis {
-  project: Project;
-  /** EVM consolidado del proyecto (suma de curvas de los paquetes). */
+/**
+ * Nodo de la WBS con su EVM. Las hojas traen su dato propio; los nodos de
+ * resumen, el roll-up de sus hojas. `depth` es el nivel para indentar.
+ */
+export interface WbsNode {
+  wp: WorkPackage;
+  depth: number;
+  isLeaf: boolean;
+  inputs: EvmInputs;
   evm: EvmResult;
   status: Status;
+  exposicion: number;
+  children: WbsNode[];
+}
+
+export interface ProjectAnalysis {
+  project: Project;
+  /** EVM consolidado del proyecto (suma de las hojas de la WBS). */
+  evm: EvmResult;
+  status: Status;
+  /** Análisis por hoja (donde vive el dato) — base del consolidado y decisiones. */
   packages: WorkPackageAnalysis[];
+  /** Árbol de la WBS con roll-ups, para la tabla de detalle. */
+  tree: WbsNode[];
   /** Ítems que requieren decisión, ordenados por exposición descendente. */
   decisiones: DecisionItem[];
 }
@@ -159,19 +178,23 @@ export function analyzeProject(
   dataDate: string,
   baseline?: Baseline
 ): ProjectAnalysis {
-  const packages = workPackages.map((wp) =>
-    analyzeWp(wp, progressByWp.get(wp.id), dataDate, baseline)
-  );
+  // Solo las hojas cargan dato; el consolidado y las decisiones se arman sobre
+  // ellas para no doble-contar los nodos de resumen.
+  const hojas = leaves(workPackages);
+  const packages = hojas.map((wp) => analyzeWp(wp, progressByWp.get(wp.id), dataDate, baseline));
+  const inputsById = new Map(packages.map((a) => [a.wp.id, a.inputs]));
 
-  // Consolidado: suma de los insumos por paquete (así reconcilia con el detalle
-  // y con la línea base). El BAC es el de referencia (base activa o suma viva).
+  // Consolidado: suma de los insumos de las hojas. El BAC es el de referencia
+  // (base activa o suma viva de hojas).
   const consolidated: EvmInputs = {
     pv: packages.reduce((acc, a) => acc + a.inputs.pv, 0),
     ev: packages.reduce((acc, a) => acc + a.inputs.ev, 0),
     ac: packages.reduce((acc, a) => acc + a.inputs.ac, 0),
-    bac: effectiveBac(workPackages, baseline),
+    bac: effectiveBac(hojas, baseline),
   };
   const evm = computeEvm(consolidated);
+
+  const tree = buildWbsTree(workPackages, inputsById);
 
   const decisiones: DecisionItem[] = packages
     .filter((a) => a.status === 'desvio' || a.status === 'atencion')
@@ -190,6 +213,54 @@ export function analyzeProject(
     evm,
     status: worstStatus(classifyIndex(evm.spi), classifyIndex(evm.cpi)),
     packages,
+    tree,
     decisiones,
   };
+}
+
+/**
+ * Construye el árbol de la WBS con roll-ups. Cada hoja toma sus insumos de
+ * `leafInputs`; cada nodo de resumen suma los de sus hijos.
+ */
+function buildWbsTree(
+  workPackages: readonly WorkPackage[],
+  leafInputs: ReadonlyMap<string, EvmInputs>
+): WbsNode[] {
+  const ZERO: EvmInputs = { pv: 0, ev: 0, ac: 0, bac: 0 };
+
+  function build(wp: WorkPackage, depth: number): WbsNode {
+    const kids = childrenOf(wp.id, workPackages);
+    let inputs: EvmInputs;
+    let children: WbsNode[] = [];
+
+    if (kids.length === 0) {
+      inputs = leafInputs.get(wp.id) ?? ZERO;
+    } else {
+      children = kids.map((k) => build(k, depth + 1));
+      inputs = children.reduce(
+        (acc, c) => ({
+          pv: acc.pv + c.inputs.pv,
+          ev: acc.ev + c.inputs.ev,
+          ac: acc.ac + c.inputs.ac,
+          bac: acc.bac + c.inputs.bac,
+        }),
+        { ...ZERO }
+      );
+    }
+
+    const evm = computeEvm(inputs);
+    const status = worstStatus(classifyIndex(evm.spi), classifyIndex(evm.cpi));
+    return {
+      wp,
+      depth,
+      isLeaf: kids.length === 0,
+      inputs,
+      evm,
+      status,
+      exposicion: exposicionDe(evm),
+      children,
+    };
+  }
+
+  return roots(workPackages).map((wp) => build(wp, 0));
 }
