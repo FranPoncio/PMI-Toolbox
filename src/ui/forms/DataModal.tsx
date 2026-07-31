@@ -68,6 +68,11 @@ export function DataModal({
 
   return (
     <Modal title={`Datos · ${project.nombre}`} onClose={onClose} wide>
+      <div className="mb-3 rounded-md border border-line bg-bg/60 px-4 py-2.5 text-[13px] text-muted">
+        La estructura de trabajo (WBS). Cargá el dato en las <span className="text-ink">hojas</span>; los
+        <span className="text-ink"> resúmenes</span> (con sub-paquetes) se calculan solos. Anidá con el campo
+        «Depende de». Importá un cronograma completo con <span className="text-ink">Importar CSV</span>.
+      </div>
       <div className="mb-4 flex items-center justify-between">
         <div className="text-[13px] text-tech">
           {workPackages.length} paquete(s) · suma {money(totalWp, project.moneda)} de{' '}

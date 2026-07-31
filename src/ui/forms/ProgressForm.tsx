@@ -71,6 +71,10 @@ export function ProgressForm({
   return (
     <Modal title={`Cargar corte · ${project.nombre}`} onClose={onClose} wide>
       <form onSubmit={submit} className="space-y-4">
+        <div className="rounded-md border border-line bg-bg/60 px-4 py-2.5 text-[13px] text-muted">
+          Elegí la fecha y completá, por paquete, el <span className="text-ink">% de avance físico</span> y el{' '}
+          <span className="text-ink">costo real acumulado</span> a esa fecha. Se parte del último corte cargado.
+        </div>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="max-w-xs">
             <Field label="Fecha de corte">

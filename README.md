@@ -10,8 +10,10 @@ infraestructura y del reporte a organismos multilaterales de crédito.
 > cálculo testeado, tablero, persistencia local, pronóstico de plazo (Earned
 > Schedule) y export a CSV. Ver [Roadmap](#-roadmap).
 
-> 📖 **¿Cómo se usa?** Ver la **[Guía de uso](docs/GUIA-DE-USO.md)** — el manual
-> práctico paso a paso (crear proyecto → WBS → línea base → cortes → reporte).
+> 📖 **¿Cómo se usa?** Guía de uso: en **[página web](https://claude.ai/code/artifact/7852d29b-849a-442f-b2cb-f7ab7d9e8200)**
+> o en **[Markdown](docs/GUIA-DE-USO.md)** — el manual paso a paso (crear proyecto
+> → WBS → línea base → cortes → reporte). La app también abre con una **intro
+> de bienvenida** y trae ayudas en cada menú.
 
 ---
 

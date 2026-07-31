@@ -16,8 +16,11 @@ import { DataModal } from './forms/DataModal';
 import { ProgressForm } from './forms/ProgressForm';
 import { ProjectForm } from './forms/ProjectForm';
 import { Report } from './Report';
+import { WelcomeModal } from './forms/WelcomeModal';
 import { ROL_LABEL } from './labels';
 import { buildCsv, downloadCsv } from './export';
+
+const ONBOARDED_KEY = 'pmi-toolbox.onboarded';
 
 const TIPO_LABEL: Record<string, string> = {
   obra_civil: 'Obra civil',
@@ -44,10 +47,29 @@ export function Dashboard() {
 
   const view = useProjectView();
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [welcome, setWelcome] = useState(false);
 
   useEffect(() => {
     void init();
   }, [init]);
+
+  // Intro de bienvenida en el primer arranque.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(ONBOARDED_KEY)) setWelcome(true);
+    } catch {
+      /* sin localStorage: no mostramos la intro automáticamente */
+    }
+  }, []);
+
+  function closeWelcome() {
+    setWelcome(false);
+    try {
+      localStorage.setItem(ONBOARDED_KEY, '1');
+    } catch {
+      /* noop */
+    }
+  }
 
   if (status !== 'ready') {
     return <div className="p-10 text-sm text-tech">Cargando…</div>;
@@ -62,7 +84,10 @@ export function Dashboard() {
         </div>
         {/* Sesión: quién está operando (atribuye la trazabilidad). */}
         {users.length > 0 && (
-          <label className="flex items-center gap-1.5 text-[12px] text-muted">
+          <label
+            className="flex items-center gap-1.5 text-[12px] text-muted"
+            title="Quién está operando; cada cambio queda registrado a su nombre en la bitácora"
+          >
             <span className="text-tech">Sesión</span>
             <Select
               value={currentUserId ?? ''}
@@ -100,15 +125,33 @@ export function Dashboard() {
               ))}
             </Select>
           )}
-          {view && <Button onClick={() => setDialog('progress')}>＋ Corte</Button>}
-          {view && <Button onClick={() => setDialog('data')}>Datos</Button>}
           {view && (
-            <Button onClick={() => setDialog('baseline')}>
+            <Button
+              title="Cargar el avance físico y el costo real de una fecha de corte"
+              onClick={() => setDialog('progress')}
+            >
+              ＋ Corte
+            </Button>
+          )}
+          {view && (
+            <Button
+              title="Editar el proyecto y su estructura de paquetes (WBS)"
+              onClick={() => setDialog('data')}
+            >
+              Datos
+            </Button>
+          )}
+          {view && (
+            <Button
+              title="Ver o congelar la línea base: el plan aprobado contra el que se mide"
+              onClick={() => setDialog('baseline')}
+            >
               {view.baseline ? `Línea base v${view.baseline.version}` : 'Línea base'}
             </Button>
           )}
           {view && (
             <Button
+              title="Descargar el corte actual en CSV (para Excel)"
               onClick={() =>
                 downloadCsv(
                   `pmi-toolbox_${view.project.nombre.replace(/\s+/g, '-')}_${view.dataDate}.csv`,
@@ -119,9 +162,24 @@ export function Dashboard() {
               Exportar
             </Button>
           )}
-          {view && <Button onClick={() => setDialog('report')}>Reporte</Button>}
-          {view && <Button onClick={() => setDialog('audit')}>Actividad</Button>}
-          <Button variant="primary" onClick={() => setDialog('newProject')}>
+          {view && (
+            <Button title="Abrir el reporte imprimible (Guardar como PDF)" onClick={() => setDialog('report')}>
+              Reporte
+            </Button>
+          )}
+          {view && (
+            <Button title="Bitácora de auditoría: quién hizo qué y cuándo" onClick={() => setDialog('audit')}>
+              Actividad
+            </Button>
+          )}
+          <Button title="Ver la introducción y cómo usar la app" onClick={() => setWelcome(true)}>
+            Guía
+          </Button>
+          <Button
+            variant="primary"
+            title="Crear un proyecto nuevo"
+            onClick={() => setDialog('newProject')}
+          >
             Nuevo proyecto
           </Button>
         </div>
@@ -168,6 +226,7 @@ export function Dashboard() {
           onClose={() => setDialog(null)}
         />
       )}
+      {welcome && <WelcomeModal onClose={closeWelcome} />}
     </div>
   );
 }
