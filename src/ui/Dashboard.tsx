@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { completionOf } from '../analytics/status';
 import { usePmStore } from '../store/pmStore';
 import { useProjectView } from '../store/selectors';
 import { buildConclusion } from './conclusion';
@@ -15,6 +16,7 @@ import { BaselineModal } from './forms/BaselineModal';
 import { DataModal } from './forms/DataModal';
 import { ProgressForm } from './forms/ProgressForm';
 import { ProjectForm } from './forms/ProjectForm';
+import { ThresholdsModal } from './forms/ThresholdsModal';
 import { Report } from './Report';
 import { WelcomeModal } from './forms/WelcomeModal';
 import { Tour, type TourStep } from './components/Tour';
@@ -80,7 +82,15 @@ const TIPO_LABEL: Record<string, string> = {
   servicios: 'Servicios',
 };
 
-type Dialog = 'progress' | 'data' | 'baseline' | 'report' | 'audit' | 'newProject' | null;
+type Dialog =
+  | 'progress'
+  | 'data'
+  | 'baseline'
+  | 'report'
+  | 'audit'
+  | 'thresholds'
+  | 'newProject'
+  | null;
 
 export function Dashboard() {
   const init = usePmStore((s) => s.init);
@@ -235,6 +245,14 @@ export function Dashboard() {
               Actividad
             </Button>
           )}
+          {view && (
+            <Button
+              title="Ajustar los umbrales SPI/CPI que clasifican el desvío por etapa del proyecto"
+              onClick={() => setDialog('thresholds')}
+            >
+              Umbrales
+            </Button>
+          )}
           <Button title="Ver la introducción y cómo usar la app" onClick={() => setWelcome(true)}>
             Guía
           </Button>
@@ -281,6 +299,7 @@ export function Dashboard() {
           onClose={() => setDialog(null)}
         />
       )}
+      {dialog === 'thresholds' && view && <ThresholdsModal onClose={() => setDialog(null)} />}
       {dialog === 'report' && view && <Report view={view} onClose={() => setDialog(null)} />}
       {dialog === 'audit' && view && (
         <AuditModal
@@ -379,7 +398,10 @@ function ProjectDashboard({
             <DecisionPanel items={analysis.decisiones} currency={cur} />
           </div>
           <EvmSummary evm={analysis.evm} currency={cur} />
-          <SchedulePanel forecast={forecast} />
+          <SchedulePanel
+            forecast={forecast}
+            completion={completionOf(analysis.evm.ev, analysis.evm.bac)}
+          />
           <SCurveChart
             project={project}
             planItems={planItems}

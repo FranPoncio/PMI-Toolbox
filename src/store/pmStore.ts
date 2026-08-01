@@ -11,12 +11,14 @@ import type {
 } from '../core/types';
 import { buildBaselineSnapshot } from '../analytics/baseline';
 import { allCutDates } from '../analytics/resolve';
+import { DEFAULT_THRESHOLDS, type ThresholdConfig } from '../analytics/status';
 import { subtreeIds } from '../analytics/wbs';
 import { newId } from '../db/db';
 import { seedIfEmpty, seedUsersIfEmpty } from '../db/seed';
 import * as repo from '../db/repository';
 
 const CURRENT_USER_KEY = 'pmi-toolbox.currentUserId';
+const THRESHOLDS_KEY = 'pmi-toolbox.thresholds';
 
 interface PmState {
   status: 'idle' | 'loading' | 'ready';
@@ -32,11 +34,15 @@ interface PmState {
   currentUserId: string | null;
   /** Fecha de corte con la que se mira el proyecto. */
   dataDate: string | null;
+  /** Umbrales de clasificación SPI/CPI por etapa del proyecto. */
+  thresholds: ThresholdConfig;
 
   init: () => Promise<void>;
   selectProject: (id: string) => Promise<void>;
   setDataDate: (date: string) => void;
   setCurrentUser: (id: string) => void;
+  setThresholds: (t: ThresholdConfig) => void;
+  resetThresholds: () => void;
 
   saveProject: (data: Omit<Project, 'id'> & { id?: string }) => Promise<string>;
   removeProject: (id: string) => Promise<void>;
@@ -64,6 +70,29 @@ function readStoredUser(): string | null {
     return typeof localStorage !== 'undefined' ? localStorage.getItem(CURRENT_USER_KEY) : null;
   } catch {
     return null;
+  }
+}
+
+/** Umbrales guardados (localStorage). Valida forma mínima; si algo falla, defaults. */
+function readStoredThresholds(): ThresholdConfig {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(THRESHOLDS_KEY) : null;
+    if (!raw) return DEFAULT_THRESHOLDS;
+    const parsed = JSON.parse(raw) as Partial<ThresholdConfig>;
+    const ok = (['inicial', 'intermedia', 'final'] as const).every(
+      (k) => typeof parsed[k]?.atencion === 'number' && typeof parsed[k]?.desvio === 'number'
+    );
+    return ok ? (parsed as ThresholdConfig) : DEFAULT_THRESHOLDS;
+  } catch {
+    return DEFAULT_THRESHOLDS;
+  }
+}
+
+function writeStoredThresholds(t: ThresholdConfig) {
+  try {
+    localStorage?.setItem(THRESHOLDS_KEY, JSON.stringify(t));
+  } catch {
+    /* sin persistencia si no hay localStorage */
   }
 }
 
@@ -119,6 +148,7 @@ export const usePmStore = create<PmState>((set, get) => {
     users: [],
     currentUserId: null,
     dataDate: null,
+    thresholds: readStoredThresholds(),
 
     async init() {
       if (get().status !== 'idle') return; // idempotente (StrictMode)
@@ -153,6 +183,16 @@ export const usePmStore = create<PmState>((set, get) => {
       } catch {
         /* sin persistencia si no hay localStorage */
       }
+    },
+
+    setThresholds(t) {
+      set({ thresholds: t });
+      writeStoredThresholds(t);
+    },
+
+    resetThresholds() {
+      set({ thresholds: DEFAULT_THRESHOLDS });
+      writeStoredThresholds(DEFAULT_THRESHOLDS);
     },
 
     async saveProject(data) {

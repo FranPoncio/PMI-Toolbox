@@ -51,6 +51,7 @@ export function useProjectView(): ProjectView | null {
   const progressEntries = usePmStore((s) => s.progressEntries);
   const baselines = usePmStore((s) => s.baselines);
   const dataDate = usePmStore((s) => s.dataDate);
+  const thresholds = usePmStore((s) => s.thresholds);
 
   return useMemo(() => {
     const project = projects.find((p) => p.id === selectedProjectId);
@@ -58,7 +59,7 @@ export function useProjectView(): ProjectView | null {
 
     const baseline = activeBaseline(baselines);
     const vigentes = vigenteByWp(progressEntries, dataDate);
-    const analysis = analyzeProject(project, workPackages, vigentes, dataDate, baseline);
+    const analysis = analyzeProject(project, workPackages, vigentes, dataDate, baseline, thresholds);
 
     // Ítems efectivos: solo las hojas (donde vive el plan), con línea base si hay.
     const hojas = leaves(workPackages);
@@ -87,5 +88,5 @@ export function useProjectView(): ProjectView | null {
       availableCuts: allCutDates(progressEntries),
       dataDate,
     };
-  }, [projects, selectedProjectId, workPackages, progressEntries, baselines, dataDate]);
+  }, [projects, selectedProjectId, workPackages, progressEntries, baselines, dataDate, thresholds]);
 }

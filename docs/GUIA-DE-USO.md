@@ -56,6 +56,7 @@ de proyectos / PMO.
 - **Exportar** — bajar el corte a CSV (Excel).
 - **Reporte** — abrir el documento imprimible (Guardar como PDF).
 - **Actividad** — la bitácora de auditoría.
+- **Umbrales** — ajustar los cortes SPI/CPI que definen el desvío por etapa del proyecto.
 - **Nuevo proyecto**.
 
 **El tablero (de arriba hacia abajo):**
@@ -139,15 +140,24 @@ lo primero que veas sea la conclusión y lo que hay que decidir.
 
 ## 5. Cómo interpretar los números
 
-**Semáforo (estado):**
+**Semáforo (estado) — umbrales sensibles a la etapa:**
 
-| Color | Significa | Umbral (SPI o CPI) |
-|---|---|---|
-| 🟢 **Dentro de plan** | ok | ≥ 0,98 |
-| 🟡 **Atención** | vigilar | 0,90 – 0,98 |
-| 🔴 **Desvío** | fuera de plan | < 0,90 |
+Un mismo SPI/CPI no pesa igual al 10 % que al 80 % de avance: al arranque hay ruido
+y margen para corregir; sobre el final el desvío es casi irreversible. Por eso la
+tolerancia se **estrecha** a medida que el proyecto avanza (el criterio del ISR del
+Banco Mundial y el PMR del BID). Valores de fábrica:
 
-El estado de un paquete es **el peor** de sus dos índices (plazo o costo).
+| Etapa (avance físico) | 🟢 En plan (≥) | 🟡 Atención | 🔴 Desvío (<) |
+|---|---|---|---|
+| **Inicial** (0–30 %) | 0,95 | 0,85–0,95 | 0,85 |
+| **Intermedia** (30–70 %) | 0,98 | 0,90–0,98 | 0,90 |
+| **Final** (70–100 %) | 0,99 | 0,95–0,99 | 0,95 |
+
+El estado de un paquete es **el peor** de sus dos índices (plazo o costo), y cada
+paquete se evalúa según **su propia** etapa de avance. Podés ajustar toda la tabla
+desde el botón **Umbrales** de la barra (se guarda en tu navegador y recalcula el
+tablero al instante). *Ejemplo:* un CPI de 0,93 al 15 % de avance queda en
+**atención**; el mismo 0,93 al 85 % ya es **desvío**.
 
 **Índices (adimensionales, comparar contra 1,00):**
 - **SPI = EV / PV** — desempeño de **plazo**. 0,80 = ganaste el 80% de lo que debías a la fecha.

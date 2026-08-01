@@ -1,5 +1,6 @@
-import { classifyIndex } from '../../analytics/status';
+import { classifyIndex, completionOf } from '../../analytics/status';
 import type { EvmResult } from '../../core/types';
+import { usePmStore } from '../../store/pmStore';
 import { index, money, signedMoney } from '../format';
 import { Panel, SectionHead } from './primitives';
 import { MetricVsPlan } from './primitives';
@@ -16,8 +17,10 @@ const EAC_LABEL: Record<string, string> = {
  * que el analista vea el rango de cierre, no un único número.
  */
 export function EvmSummary({ evm, currency }: { evm: EvmResult; currency: string }) {
-  const spiStatus = classifyIndex(evm.spi);
-  const cpiStatus = classifyIndex(evm.cpi);
+  const thresholds = usePmStore((s) => s.thresholds);
+  const completion = completionOf(evm.ev, evm.bac);
+  const spiStatus = classifyIndex(evm.spi, completion, thresholds);
+  const cpiStatus = classifyIndex(evm.cpi, completion, thresholds);
 
   return (
     <Panel>

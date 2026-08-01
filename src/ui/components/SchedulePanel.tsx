@@ -1,5 +1,6 @@
 import { classifyIndex } from '../../analytics/status';
 import type { ScheduleForecast } from '../../analytics/schedule';
+import { usePmStore } from '../../store/pmStore';
 import { index, indexDelta, months, signedMonths } from '../format';
 import { STATUS_STYLE } from '../statusColor';
 import { Panel, SectionHead } from './primitives';
@@ -9,8 +10,16 @@ import { Panel, SectionHead } from './primitives';
  * al final del proyecto siempre tiende a 0), acá el atraso se expresa en tiempo
  * y se proyecta una fecha de fin, comparada siempre contra el plan.
  */
-export function SchedulePanel({ forecast }: { forecast: ScheduleForecast }) {
-  const status = classifyIndex(forecast.spit);
+export function SchedulePanel({
+  forecast,
+  completion,
+}: {
+  forecast: ScheduleForecast;
+  /** Avance físico consolidado (0..1), para aplicar los umbrales de la etapa. */
+  completion?: number;
+}) {
+  const thresholds = usePmStore((s) => s.thresholds);
+  const status = classifyIndex(forecast.spit, completion, thresholds);
   const s = STATUS_STYLE[status];
 
   const atrasado = forecast.atrasoMeses !== null && forecast.atrasoMeses > 0.1;

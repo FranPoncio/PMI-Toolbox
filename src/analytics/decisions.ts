@@ -18,7 +18,17 @@ import type {
   WorkPackage,
 } from '../core/types';
 import { effectiveBac, effectivePlanItem } from './baseline';
-import { classifyIndex, worstStatus, type Status } from './status';
+import {
+  DEFAULT_THRESHOLDS,
+  STAGE_LABEL,
+  classifyIndex,
+  completionOf,
+  stageOf,
+  worstStatus,
+  type Stage,
+  type Status,
+  type ThresholdConfig,
+} from './status';
 import { childrenOf, leaves, roots } from './wbs';
 
 export interface WorkPackageAnalysis {
@@ -37,6 +47,10 @@ export interface WorkPackageAnalysis {
   exposicion: number;
   /** ¿El paquete ya arrancó a la fecha de corte? (PV > 0). */
   iniciado: boolean;
+  /** Avance físico (EV/BAC, 0..1) a la fecha de corte. */
+  completion: number;
+  /** Etapa según el avance, que determina qué umbrales se aplicaron. */
+  stage: Stage;
 }
 
 export interface DecisionItem {
@@ -61,6 +75,8 @@ export interface WbsNode {
   evm: EvmResult;
   status: Status;
   exposicion: number;
+  /** Etapa del nodo según su avance (para explicar el criterio aplicado). */
+  stage: Stage;
   children: WbsNode[];
 }
 
@@ -107,12 +123,14 @@ function analyzeWp(
   wp: WorkPackage,
   progress: ProgressEntry | undefined,
   dataDate: string,
-  baseline: Baseline | undefined
+  baseline: Baseline | undefined,
+  config: ThresholdConfig
 ): WorkPackageAnalysis {
   const inputs = inputsForWp(wp, progress, dataDate, baseline);
   const evm = computeEvm(inputs);
-  const spiStatus = classifyIndex(evm.spi);
-  const cpiStatus = classifyIndex(evm.cpi);
+  const completion = completionOf(inputs.ev, inputs.bac);
+  const spiStatus = classifyIndex(evm.spi, completion, config);
+  const cpiStatus = classifyIndex(evm.cpi, completion, config);
   return {
     wp,
     inputs,
@@ -122,6 +140,8 @@ function analyzeWp(
     status: worstStatus(spiStatus, cpiStatus),
     exposicion: exposicionDe(evm),
     iniciado: inputs.pv > 0,
+    completion,
+    stage: stageOf(completion),
   };
 }
 
@@ -147,6 +167,16 @@ function motivoDe(a: WorkPackageAnalysis, currency: string): string {
     partes.push(
       `SPI ${spi}: ejecutado ${money(a.inputs.ev, currency)} contra ${money(a.inputs.pv, currency)} planificado a la fecha (SV ${signedMoney(evm.sv, currency)})`
     );
+  }
+
+  // Contexto de etapa: el mismo índice pesa más cuanto más avanzado está.
+  const pct = Math.round(a.completion * 100);
+  if (a.stage === 'final') {
+    partes.push(`en etapa ${STAGE_LABEL[a.stage]} (${pct}% ejecutado), con poco margen para revertirlo`);
+  } else if (a.stage === 'inicial') {
+    partes.push(`todavía en etapa ${STAGE_LABEL[a.stage]} (${pct}% ejecutado): hay margen si se corrige ahora`);
+  } else {
+    partes.push(`en etapa ${STAGE_LABEL[a.stage]} (${pct}% ejecutado)`);
   }
 
   return partes.join('. ') + '.';
@@ -176,12 +206,15 @@ export function analyzeProject(
   workPackages: readonly WorkPackage[],
   progressByWp: ReadonlyMap<string, ProgressEntry>,
   dataDate: string,
-  baseline?: Baseline
+  baseline?: Baseline,
+  config: ThresholdConfig = DEFAULT_THRESHOLDS
 ): ProjectAnalysis {
   // Solo las hojas cargan dato; el consolidado y las decisiones se arman sobre
   // ellas para no doble-contar los nodos de resumen.
   const hojas = leaves(workPackages);
-  const packages = hojas.map((wp) => analyzeWp(wp, progressByWp.get(wp.id), dataDate, baseline));
+  const packages = hojas.map((wp) =>
+    analyzeWp(wp, progressByWp.get(wp.id), dataDate, baseline, config)
+  );
   const inputsById = new Map(packages.map((a) => [a.wp.id, a.inputs]));
 
   // Consolidado: suma de los insumos de las hojas. El BAC es el de referencia
@@ -193,8 +226,9 @@ export function analyzeProject(
     bac: effectiveBac(hojas, baseline),
   };
   const evm = computeEvm(consolidated);
+  const projCompletion = completionOf(consolidated.ev, consolidated.bac);
 
-  const tree = buildWbsTree(workPackages, inputsById);
+  const tree = buildWbsTree(workPackages, inputsById, config);
 
   const decisiones: DecisionItem[] = packages
     .filter((a) => a.status === 'desvio' || a.status === 'atencion')
@@ -211,7 +245,10 @@ export function analyzeProject(
   return {
     project,
     evm,
-    status: worstStatus(classifyIndex(evm.spi), classifyIndex(evm.cpi)),
+    status: worstStatus(
+      classifyIndex(evm.spi, projCompletion, config),
+      classifyIndex(evm.cpi, projCompletion, config)
+    ),
     packages,
     tree,
     decisiones,
@@ -224,7 +261,8 @@ export function analyzeProject(
  */
 function buildWbsTree(
   workPackages: readonly WorkPackage[],
-  leafInputs: ReadonlyMap<string, EvmInputs>
+  leafInputs: ReadonlyMap<string, EvmInputs>,
+  config: ThresholdConfig = DEFAULT_THRESHOLDS
 ): WbsNode[] {
   const ZERO: EvmInputs = { pv: 0, ev: 0, ac: 0, bac: 0 };
 
@@ -249,7 +287,11 @@ function buildWbsTree(
     }
 
     const evm = computeEvm(inputs);
-    const status = worstStatus(classifyIndex(evm.spi), classifyIndex(evm.cpi));
+    const completion = completionOf(inputs.ev, inputs.bac);
+    const status = worstStatus(
+      classifyIndex(evm.spi, completion, config),
+      classifyIndex(evm.cpi, completion, config)
+    );
     return {
       wp,
       depth,
@@ -258,6 +300,7 @@ function buildWbsTree(
       evm,
       status,
       exposicion: exposicionDe(evm),
+      stage: stageOf(completion),
       children,
     };
   }
