@@ -1,7 +1,8 @@
 import type { CurvePoint } from '../../analytics/resolve';
+import type { ScheduleForecast } from '../../analytics/schedule';
 import { plannedValue, sCurve } from '../../core/evm';
 import type { PlannedItem, Project } from '../../core/types';
-import { money } from '../format';
+import { money, signedMonths } from '../format';
 import { Panel, SectionHead } from './primitives';
 
 const W = 760;
@@ -26,12 +27,15 @@ export function SCurveChart({
   bac,
   dataDate,
   history,
+  forecast,
 }: {
   project: Project;
   planItems: readonly PlannedItem[];
   bac: number;
   dataDate: string;
   history: CurvePoint[];
+  /** Pronóstico por Earned Schedule, para anotar el atraso en tiempo. */
+  forecast?: ScheduleForecast;
 }) {
   const cur = project.moneda;
   const plotW = W - PAD.left - PAD.right;
@@ -67,6 +71,19 @@ export function SCurveChart({
   const evNow = last?.ev ?? 0;
   const acNow = last?.ac ?? 0;
 
+  // Earned Schedule: momento del plan en que estaba previsto haber ganado lo que
+  // hoy tenemos ganado. Su distancia horizontal a la fecha de corte ES el atraso
+  // en tiempo — lo que el SV en dinero no muestra (SV → 0 al final aunque se
+  // termine tarde). Se dibuja como un puente horizontal a la altura de EV: desde
+  // la curva PV (en ES) hasta el punto EV de hoy (en el corte).
+  const esFrac =
+    forecast && forecast.spit !== null && forecast.pdMonths > 0
+      ? Math.max(0, Math.min(1, forecast.esMonths / forecast.pdMonths))
+      : null;
+  const esX = esFrac === null ? null : x(esFrac);
+  const showES = esX !== null && evNow > 0 && evNow < bac && Math.abs(esX - nowX) > 8;
+  const esY = y(evNow);
+
   const series = [
     { key: 'pv', label: 'PV · planificado', value: pvNow, color: '#256B7E' },
     { key: 'ev', label: 'EV · ganado', value: evNow, color: '#10222A' },
@@ -101,6 +118,31 @@ export function SCurveChart({
             corte
           </text>
 
+          {/* Earned Schedule: guía vertical en ES y puente de atraso en tiempo. */}
+          {showES && esX !== null && (
+            <g>
+              <line x1={esX} y1={PAD.top} x2={esX} y2={y(0)} stroke="#8A99A0" strokeDasharray="2 3" />
+              <text x={esX} y={H - PAD.bottom + 20} fontSize="11" fill="#58696F" textAnchor="middle">
+                ES
+              </text>
+              {/* Puente horizontal a la altura de EV, entre ES y el corte. */}
+              <line x1={esX} y1={esY} x2={nowX} y2={esY} stroke="#58696F" strokeWidth="1.5" strokeDasharray="4 3" />
+              <line x1={esX} y1={esY - 4} x2={esX} y2={esY + 4} stroke="#58696F" strokeWidth="1.5" />
+              <line x1={nowX} y1={esY - 4} x2={nowX} y2={esY + 4} stroke="#58696F" strokeWidth="1.5" />
+              <text
+                x={(esX + nowX) / 2}
+                y={esY - 8}
+                fontSize="11"
+                fill="#10222A"
+                textAnchor="middle"
+                className="num"
+                fontWeight="600"
+              >
+                {signedMonths(forecast?.svtMonths ?? null)}
+              </text>
+            </g>
+          )}
+
           {/* PV (baseline S), EV y AC. */}
           <path d={pvPath} fill="none" stroke="#256B7E" strokeWidth="2" strokeDasharray="5 3" />
           <path d={acPath} fill="none" stroke="#B07314" strokeWidth="2" />
@@ -133,6 +175,15 @@ export function SCurveChart({
         <p className="px-2 text-[12px] leading-snug text-tech/80">
           La línea teal es el plan de devengamiento (perfil S). EV por debajo de PV es atraso; AC por
           encima de EV es sobrecosto.
+          {showES && (
+            <>
+              {' '}
+              El puente gris entre <span className="font-600">ES</span> y el corte es la{' '}
+              <span className="font-600">diferencia de plazo</span> (Earned Schedule): hoy tenemos el
+              valor ganado que el plan preveía para antes —SV(t){' '}
+              <span className="num">{signedMonths(forecast?.svtMonths ?? null)}</span>.
+            </>
+          )}
         </p>
       </div>
     </Panel>

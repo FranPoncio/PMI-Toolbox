@@ -66,7 +66,7 @@ de proyectos / PMO.
 3. **Requiere decisión** — los paquetes fuera de plan, ordenados por exposición, con el motivo.
 4. **Consolidado** — EV / AC / EAC contra plan, y las tres variantes de EAC.
 5. **Plazo (Earned Schedule)** — la **fecha de fin pronosticada** contra la planificada.
-6. **Curva S** — plan, ganado y real en el tiempo.
+6. **Curva S** — plan, ganado y real en el tiempo. Sobre ella, el **puente ES→corte** muestra el atraso en *tiempo* (Earned Schedule): a qué fecha del plan corresponde el valor que ya ganaste.
 7. **Estructura de trabajo (WBS)** — el detalle por paquete, con la jerarquía.
 
 ---

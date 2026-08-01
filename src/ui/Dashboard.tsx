@@ -408,6 +408,7 @@ function ProjectDashboard({
             bac={bac}
             dataDate={dataDate}
             history={history}
+            forecast={forecast}
           />
           <WorkPackageTable tree={analysis.tree} currency={cur} />
         </div>
