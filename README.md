@@ -220,6 +220,10 @@ backend real —multiusuario sincronizado entre dispositivos— es implementar
 que este entorno estático no puede desplegar por sí mismo, pero que la
 arquitectura ya deja listo.
 
+El diseño completo de ese backend (esquema Postgres, auth y roles, protocolo de
+sync push/pull, resolución de conflictos y el boceto del `HttpSyncAdapter`) está
+en **[`docs/BACKEND-API.md`](docs/BACKEND-API.md)**.
+
 ---
 
 ## 🛠️ Stack
