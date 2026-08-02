@@ -175,9 +175,15 @@ pmi-toolbox/
 │  │  ├─ resolve.ts        Corte vigente por paquete + historia EV/AC
 │  │  ├─ schedule.ts       Fechas del pronóstico de plazo
 │  │  └─ status.ts         Clasificación y umbrales
-│  ├─ db/             Persistencia con Dexie (IndexedDB)
-│  │  ├─ db.ts             Esquema
-│  │  ├─ repository.ts     CRUD transaccional
+│  ├─ data/           Capa de datos (puerto + adaptadores) — backend-ready
+│  │  ├─ repository.ts        Puerto: el contrato de persistencia
+│  │  ├─ dexieRepository.ts   Adaptador IndexedDB (Dexie)
+│  │  ├─ memoryRepository.ts  Adaptador en memoria (referencia + tests)
+│  │  ├─ sync.ts              Cola de cambios + SyncAdapter + mock
+│  │  ├─ syncingRepository.ts Decorador: registra y empuja cambios
+│  │  └─ index.ts             Armado del repositorio de la app
+│  ├─ db/             Esquema Dexie (IndexedDB) + seed
+│  │  ├─ db.ts             Esquema y versiones/migraciones
 │  │  └─ seed.ts           Datos de ejemplo (con historia de cortes)
 │  ├─ store/          Estado con Zustand
 │  │  ├─ pmStore.ts        Carga async, selección y CRUD
@@ -197,6 +203,22 @@ pmi-toolbox/
 
 Principio rector: **el `core/` es la única fuente de verdad de los números.** La
 UI nunca recalcula un indicador; sólo muestra lo que devuelve el motor.
+
+### Capa de datos backend-ready
+
+Todo el acceso a datos pasa por el **puerto** `Repository` (arquitectura
+hexagonal): el store y la UI dependen de ese contrato, no de una base concreta.
+Hoy lo cumplen dos adaptadores intercambiables —IndexedDB (`DexieRepository`) y
+en memoria (`MemoryRepository`)—, lo que prueba que la app no está atada al
+almacenamiento.
+
+Sobre eso, `SyncingRepository` registra cada mutación del usuario como un
+`Change` en una **cola persistente** (offline-first) y la empuja a través de un
+`SyncAdapter`. Hoy ese adaptador es un **mock** (no hay servidor). Conectar un
+backend real —multiusuario sincronizado entre dispositivos— es implementar
+`SyncAdapter` contra la API: **nada del store ni de la UI cambia**. Es el paso
+que este entorno estático no puede desplegar por sí mismo, pero que la
+arquitectura ya deja listo.
 
 ---
 
@@ -239,8 +261,11 @@ En orden de valor para el perfil PMO / control de proyectos:
 - [x] EAC/pronóstico como **rango** entre métodos (forecasting por banda)
 - [x] **WBS jerárquica** (nodos de resumen con roll-up de sus hojas)
 - [x] **Usuarios, roles y bitácora de auditoría** (quién cargó qué corte, y cuándo)
-- [ ] Sincronización multi-dispositivo (requiere un backend/servidor — no incluido:
-      hoy la persistencia es local por navegador, IndexedDB)
+- [x] **Umbrales SPI/CPI sensibles a la etapa** del proyecto (criterio ISR/PMR)
+- [x] **Earned Schedule sobre la curva S** (atraso en tiempo, no solo en dinero)
+- [x] **Capa de datos backend-ready** (puerto `Repository` + cola de sync + mock)
+- [~] Sincronización multi-dispositivo: **arquitectura lista** (`SyncAdapter`);
+      falta el servidor real, que este entorno estático no despliega
 - [ ] Notificación a Slack cuando un paquete cruza a "desvío"
 
 ---

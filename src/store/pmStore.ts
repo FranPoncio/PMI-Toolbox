@@ -15,7 +15,7 @@ import { DEFAULT_THRESHOLDS, type ThresholdConfig } from '../analytics/status';
 import { subtreeIds } from '../analytics/wbs';
 import { newId } from '../db/db';
 import { seedIfEmpty, seedUsersIfEmpty } from '../db/seed';
-import * as repo from '../db/repository';
+import { repo } from '../data';
 
 const CURRENT_USER_KEY = 'pmi-toolbox.currentUserId';
 const THRESHOLDS_KEY = 'pmi-toolbox.thresholds';

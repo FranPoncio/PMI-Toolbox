@@ -12,8 +12,8 @@ import {
   project,
   workPackages,
 } from '../fixtures/gasoducto';
-import { db, newId } from './db';
-import { appendAudit, bulkInsert, countProjects, countUsers, listUsers } from './repository';
+import { newId } from './db';
+import { baseRepo } from '../data';
 
 /** Usuarios de ejemplo. */
 const SEED_USERS: User[] = [
@@ -25,10 +25,10 @@ const SEED_USERS: User[] = [
 
 /** Siembra los usuarios si no hay ninguno. Devuelve la lista vigente. */
 export async function seedUsersIfEmpty(): Promise<User[]> {
-  if ((await countUsers()) === 0) {
-    await db.users.bulkPut(SEED_USERS);
+  if ((await baseRepo.countUsers()) === 0) {
+    await baseRepo.bulkPutUsers(SEED_USERS);
   }
-  return listUsers();
+  return baseRepo.listUsers();
 }
 
 /** Fechas de corte del ejemplo (mensuales) hasta la fecha de corte final. */
@@ -78,7 +78,7 @@ function buildHistory(): ProgressEntry[] {
 
 /** Carga el ejemplo sólo si no hay proyectos. Devuelve true si sembró. */
 export async function seedIfEmpty(): Promise<boolean> {
-  if ((await countProjects()) > 0) return false;
+  if ((await baseRepo.countProjects()) > 0) return false;
 
   // Línea base v1 aprobada al inicio del proyecto.
   const baseline: Baseline = {
@@ -92,7 +92,7 @@ export async function seedIfEmpty(): Promise<boolean> {
     id: newId(),
   };
 
-  await bulkInsert([project], [...workPackages], buildHistory(), [baseline]);
+  await baseRepo.bulkInsert([project], [...workPackages], buildHistory(), [baseline]);
   await seedAudit(baseline);
   return true;
 }
@@ -135,5 +135,5 @@ async function seedAudit(baseline: Baseline): Promise<void> {
     push(`${date}T18:00:00.000Z`, u, 'importar', 'corte', `Cargó el corte ${date}`);
   });
 
-  for (const e of entries) await appendAudit(e);
+  for (const e of entries) await baseRepo.appendAudit(e);
 }
