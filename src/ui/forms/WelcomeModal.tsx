@@ -1,8 +1,8 @@
 import { Modal } from '../components/Modal';
 import { Button } from '../components/fields';
 
-/** URL de la guía de uso publicada como página web. */
-export const GUIA_URL = 'https://claude.ai/code/artifact/7852d29b-849a-442f-b2cb-f7ab7d9e8200';
+/** URL de la guía de uso (vive en el repo y se renderiza en GitHub). */
+export const GUIA_URL = 'https://github.com/FranPoncio/PMI-Toolbox/blob/main/docs/GUIA-DE-USO.md';
 
 const PASOS: Array<{ n: string; t: string; d: string }> = [
   { n: '1', t: 'Creá el proyecto', d: 'Nombre, BAC (presupuesto total), fechas y moneda.' },

@@ -1,5 +1,7 @@
 # 📊 PMI Toolbox
 
+🔗 **[Ver la app funcionando →](https://franponcio.github.io/PMI-Toolbox/)**
+
 Aplicación web de **gestión de proyectos con un motor completo de Earned Value
 Management (EVM)**, configurable por tipo de proyecto (obra civil, industrial,
 TI, servicios). Pensada para el analista de control de proyectos / PMO que
@@ -10,11 +12,10 @@ infraestructura y del reporte a organismos multilaterales de crédito.
 > cálculo testeado, tablero, persistencia local, pronóstico de plazo (Earned
 > Schedule) y export a CSV. Ver [Roadmap](#-roadmap).
 
-> 📖 **¿Cómo se usa?** Guía de uso: en **[página web](https://claude.ai/code/artifact/7852d29b-849a-442f-b2cb-f7ab7d9e8200)**
-> o en **[Markdown](docs/GUIA-DE-USO.md)** — el manual paso a paso (crear proyecto
-> → WBS → línea base → cortes → reporte). La app también abre con una **intro
-> de bienvenida**, un **recorrido guiado** (spotlight paso a paso) y ayudas en
-> cada menú.
+> 📖 **¿Cómo se usa?** Guía paso a paso en
+> **[docs/GUIA-DE-USO.md](docs/GUIA-DE-USO.md)** — crear proyecto →
+> WBS → línea base → cortes → reporte. La app también abre con una
+> intro de bienvenida, un recorrido guiado y ayudas en cada menú.
 >
 > 🎬 **Videos y capturas:** ver **[docs/media](docs/media/)** — demo completa,
 > demo de carga de un corte, y capturas del tablero, el reporte y el onboarding.
