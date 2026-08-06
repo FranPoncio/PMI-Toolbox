@@ -12,82 +12,88 @@ proyecto y ese motor.
 ## Cómo está armado (puerto + adaptadores)
 
 Igual que la capa de datos, el asistente vive detrás de un **puerto**
-[`ProjectAssistant`](../src/assistant/assistant.ts). Hay dos implementaciones
+[`ProjectAssistant`](../src/assistant/assistant.ts). Dos implementaciones
 intercambiables:
 
 | Implementación | Qué hace | Requiere |
 |---|---|---|
 | `MockAssistant` | Plantillas por dominio; funciona **offline** | nada |
-| `SupabaseAssistant` | Llama a una **Edge Function** que consulta a **Claude** | Supabase + API key |
+| `HttpAssistant` | Llama a una **función serverless** que consulta a **Claude** | un host + API key |
 
 La app usa el mock por defecto y **se cambia sola a la IA real** cuando detecta
-las variables de entorno de Supabase — nada del store ni de la UI cambia.
+la variable `VITE_ASSISTANT_URL` — nada del store ni de la UI cambia.
 
 ```
-Navegador ── ProjectAssistant ── SupabaseAssistant ──► Edge Function (Supabase)
-                                                              │  (la API key vive acá)
-                                                              ▼
-                                                        API de Claude
+Navegador ── ProjectAssistant ── HttpAssistant ──► función (Deno Deploy / Supabase / …)
+                                                        │  (la API key vive acá)
+                                                        ▼
+                                                   API de Claude
 ```
 
-## Activar la IA real — 4 pasos
+La función está en [`supabase/functions/assistant/index.ts`](../supabase/functions/assistant/index.ts).
+Está escrita en **Deno** (`Deno.serve`), así que **el mismo archivo corre en Deno
+Deploy, Supabase Edge, o cualquier runtime Deno** — sin cambios.
 
-Necesitás una cuenta de **Supabase** (free tier alcanza) y una **API key de
-Anthropic** (console.anthropic.com; cobra por uso, centavos por llamada).
+## Activar la IA real — opción recomendada: Deno Deploy (gratis, no se duerme)
 
-### 1. Instalar la CLI de Supabase y enlazar el proyecto
+Necesitás una cuenta de **Deno Deploy** (free tier) y una **API key de Anthropic**
+(console.anthropic.com; cobra por uso, centavos por proyecto, con créditos de
+prueba al empezar).
 
-```bash
-npm install -g supabase        # o brew install supabase/tap/supabase
-supabase login
-supabase link --project-ref <TU_PROJECT_REF>   # está en la URL del panel de Supabase
-```
+1. **Crear el proyecto** en [dash.deno.com](https://dash.deno.com) → *New Project*.
+   Apuntalo al repo y al entrypoint `supabase/functions/assistant/index.ts`
+   (o pegá el archivo con *Playground*).
+2. **Cargar la API key** como variable de entorno del proyecto en Deno Deploy:
+   `ANTHROPIC_API_KEY = sk-ant-...`. Queda **solo en el servidor**.
+3. **Apuntar la app** — en un `.env` en la raíz (Vite lee las `VITE_`):
 
-### 2. Desplegar la Edge Function
+   ```env
+   VITE_ASSISTANT_URL=https://<tu-proyecto>.deno.dev
+   # VITE_ASSISTANT_TOKEN no hace falta en Deno Deploy
+   ```
 
-La función ya está en el repo, en [`supabase/functions/assistant/`](../supabase/functions/assistant/index.ts).
+4. `npm run build` (o reiniciar el dev server). Listo: el botón **✨ Con IA** ahora
+   usa Claude.
+
+### Alternativa: Supabase Edge Functions
+
+Mismo archivo. Requiere la CLI de Supabase:
 
 ```bash
 supabase functions deploy assistant --no-verify-jwt
-```
-
-### 3. Cargar la API key de Anthropic como secreto del servidor
-
-```bash
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-La key queda **solo en el servidor** de Supabase — nunca llega al navegador.
-
-### 4. Apuntar la app a la función
-
-En un archivo `.env` en la raíz del proyecto (Vite lee las variables `VITE_`):
-
 ```env
-VITE_ASSISTANT_URL=https://<TU_PROJECT_REF>.supabase.co/functions/v1/assistant
-VITE_SUPABASE_ANON_KEY=<clave anónima del proyecto, del panel de Supabase>
+VITE_ASSISTANT_URL=https://<ref>.supabase.co/functions/v1/assistant
+VITE_ASSISTANT_TOKEN=<clave anónima del proyecto>   # Supabase sí pide un token
 ```
 
-Reconstruí (`npm run build`) o reiniciá el dev server. Listo: el asistente ahora
-usa Claude. La `anon key` **no es secreta** (identifica el proyecto); el secreto
-es la API key de Anthropic, que quedó en el paso 3.
+> Nota: el free tier de Supabase **pausa** los proyectos inactivos; Deno Deploy no.
+> Por eso, para una herramienta de uso esporádico, Deno Deploy es más cómodo.
 
 ## Qué modelo usa y cuánto cuesta
 
 La función usa **Claude (`claude-opus-5`)** con salida estructurada (el modelo
 está obligado a devolver exactamente el `ProjectDraft`). El costo por proyecto
-armado es de centavos; se paga por uso a Anthropic, no a la app.
+armado es de **centavos**; se paga por uso a Anthropic.
+
+> ⚠️ **Endpoint público = tu key paga el uso de todos.** Si publicás la app y la
+> función es abierta, cada persona que arme un proyecto consume tu saldo de
+> Anthropic. Para un portfolio/demo con poco tráfico es insignificante; si crece,
+> conviene sumarle un límite de uso (rate limit) a la función.
 
 ## Cómo se prueba sin backend
 
-Los tests y la demo usan `MockAssistant`, que arma un plan con plantillas por
-dominio (obra / ventas / estudio / software / genérico). Es la prueba de que la
-app **no depende** de la IA para funcionar: la IA la mejora, no la sostiene.
+El botón **✨ Con IA** funciona igual sin configurar nada: usa `MockAssistant`,
+que arma un plan con plantillas por dominio (obra / ventas / estudio / software /
+genérico). Es la prueba de que la app **no depende** de la IA para funcionar: la
+IA la mejora, no la sostiene. El modal avisa si está en modo demo o con IA real.
 
 ## Seguridad
 
-- La API key de Anthropic vive como **secreto de la Edge Function**; el navegador
-  nunca la ve.
+- La API key de Anthropic vive como **variable de entorno del servidor**; el
+  navegador nunca la ve.
 - La función valida el cuerpo y responde errores claros (sin filtrar internos).
 - El `ProjectDraft` que vuelve se **revisa y edita** antes de crear el proyecto —
   la IA propone, vos aprobás.

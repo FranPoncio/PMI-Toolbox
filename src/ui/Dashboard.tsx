@@ -11,6 +11,7 @@ import { WorkPackageTable } from './components/WorkPackageTable';
 import { StatusPill } from './components/primitives';
 import { Button, Select } from './components/fields';
 import { Modal } from './components/Modal';
+import { AssistantModal } from './forms/AssistantModal';
 import { AuditModal } from './forms/AuditModal';
 import { BaselineModal } from './forms/BaselineModal';
 import { DataModal } from './forms/DataModal';
@@ -90,6 +91,7 @@ type Dialog =
   | 'audit'
   | 'thresholds'
   | 'newProject'
+  | 'assistant'
   | null;
 
 export function Dashboard() {
@@ -257,6 +259,12 @@ export function Dashboard() {
             Guía
           </Button>
           <Button
+            title="Armar un proyecto de cualquier tipo con ayuda de IA"
+            onClick={() => setDialog('assistant')}
+          >
+            ✨ Con IA
+          </Button>
+          <Button
             variant="primary"
             title="Crear un proyecto nuevo"
             onClick={() => setDialog('newProject')}
@@ -278,6 +286,7 @@ export function Dashboard() {
           <ProjectForm onDone={() => setDialog(null)} />
         </Modal>
       )}
+      {dialog === 'assistant' && <AssistantModal onClose={() => setDialog(null)} />}
       {dialog === 'data' && view && (
         <DataModal project={view.project} workPackages={workPackages} onClose={() => setDialog(null)} />
       )}
