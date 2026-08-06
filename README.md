@@ -269,6 +269,8 @@ En orden de valor para el perfil PMO / control de proyectos:
 - [x] **Umbrales SPI/CPI sensibles a la etapa** del proyecto (criterio ISR/PMR)
 - [x] **Earned Schedule sobre la curva S** (atraso en tiempo, no solo en dinero)
 - [x] **Capa de datos backend-ready** (puerto `Repository` + cola de sync + mock)
+- [x] **Asistente de IA** para armar cualquier proyecto (puerto `ProjectAssistant`
+      + Edge Function de Supabase que consulta a Claude) — [guía](docs/ASISTENTE-IA.md)
 - [~] Sincronización multi-dispositivo: **arquitectura lista** (`SyncAdapter`);
       falta el servidor real, que este entorno estático no despliega
 - [ ] Notificación a Slack cuando un paquete cruza a "desvío"

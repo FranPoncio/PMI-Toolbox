@@ -13,6 +13,7 @@ import { buildBaselineSnapshot } from '../analytics/baseline';
 import { allCutDates } from '../analytics/resolve';
 import { DEFAULT_THRESHOLDS, type ThresholdConfig } from '../analytics/status';
 import { subtreeIds } from '../analytics/wbs';
+import { draftToEntities, type ProjectDraft } from '../assistant';
 import { newId } from '../db/db';
 import { seedIfEmpty, seedUsersIfEmpty } from '../db/seed';
 import { repo } from '../data';
@@ -46,6 +47,8 @@ interface PmState {
 
   saveProject: (data: Omit<Project, 'id'> & { id?: string }) => Promise<string>;
   removeProject: (id: string) => Promise<void>;
+  /** Crea un proyecto y su WBS a partir de un borrador del asistente de IA. */
+  createProjectFromDraft: (draft: ProjectDraft) => Promise<string>;
 
   saveWorkPackage: (data: Omit<WorkPackage, 'id'> & { id?: string }) => Promise<void>;
   removeWorkPackage: (id: string) => Promise<void>;
@@ -209,6 +212,22 @@ export const usePmStore = create<PmState>((set, get) => {
         await record(id, 'editar', 'proyecto', `Editó el proyecto «${project.nombre}»`);
       }
       return id;
+    },
+
+    async createProjectFromDraft(draft) {
+      const { project, workPackages } = draftToEntities(draft, newId);
+      await repo.putProject(project);
+      if (workPackages.length > 0) await repo.bulkPutWorkPackages(workPackages);
+      const projects = await repo.listProjects();
+      set({ projects, selectedProjectId: project.id, dataDate: null });
+      await loadProjectData(project.id);
+      await record(
+        project.id,
+        'crear',
+        'proyecto',
+        `Creó el proyecto «${project.nombre}» con el asistente de IA (${workPackages.length} paquete(s))`
+      );
+      return project.id;
     },
 
     async removeProject(id) {
